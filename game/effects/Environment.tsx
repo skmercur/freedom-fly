@@ -3,55 +3,69 @@
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
-import {
-  backgroundFragmentShader,
-  backgroundVertexShader,
-} from "@/game/shaders/backgroundShader";
+import { Scenery } from "@/game/effects/Scenery";
 import { BOUND_Y, COLORS } from "@/lib/constants";
 
-/** Inside-out sky dome running the animated gradient/nebula shader. */
+/**
+ * Inside-out sky dome with a baked vertex-color gradient.
+ *
+ * WebGPU can't run our old GLSL background shader, so the gradient is baked
+ * into the geometry's vertex colors instead (top → bottom lerp) and drawn with
+ * a plain `MeshBasicMaterial`. A slow rotation keeps the sky subtly alive.
+ */
 function Backdrop() {
-  const matRef = useRef<THREE.ShaderMaterial>(null);
-  const uniforms = useMemo(
-    () => ({
-      uTime: { value: 0 },
-      uTop: { value: new THREE.Color("#0b1030") },
-      uBottom: { value: new THREE.Color(COLORS.bg) },
-    }),
+  const ref = useRef<THREE.Mesh>(null);
+
+  const geometry = useMemo(() => {
+    const geo = new THREE.SphereGeometry(95, 32, 24);
+    const top = new THREE.Color("#101a44");
+    const bottom = new THREE.Color(COLORS.bg);
+    const pos = geo.attributes.position;
+    const colors = new Float32Array(pos.count * 3);
+    const c = new THREE.Color();
+    for (let i = 0; i < pos.count; i++) {
+      const h = (pos.getY(i) / 95) * 0.5 + 0.5; // 0 (bottom) → 1 (top)
+      c.copy(bottom).lerp(top, Math.pow(h, 1.3));
+      colors[i * 3] = c.r;
+      colors[i * 3 + 1] = c.g;
+      colors[i * 3 + 2] = c.b;
+    }
+    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    return geo;
+  }, []);
+
+  const material = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        vertexColors: true,
+        side: THREE.BackSide,
+        depthWrite: false,
+        fog: false,
+        toneMapped: false,
+      }),
     [],
   );
-  useFrame((state) => {
-    if (matRef.current)
-      matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+
+  useFrame((_, delta) => {
+    if (ref.current) ref.current.rotation.y += delta * 0.01;
   });
-  return (
-    <mesh>
-      <sphereGeometry args={[95, 32, 32]} />
-      <shaderMaterial
-        ref={matRef}
-        uniforms={uniforms}
-        vertexShader={backgroundVertexShader}
-        fragmentShader={backgroundFragmentShader}
-        side={THREE.BackSide}
-        depthWrite={false}
-      />
-    </mesh>
-  );
+
+  return <mesh ref={ref} geometry={geometry} material={material} />;
 }
 
 /**
- * Scene lighting + backdrop + a shadow-catching floor.
+ * Scene lighting + backdrop + optional scenery + a shadow-catching floor.
  * A single shadow-casting key light keeps the GPU budget in check while still
  * grounding the ship and rocks with real shadows.
  */
 export function Environment() {
   return (
     <>
-      <ambientLight intensity={0.45} color="#9fb0ff" />
-      <hemisphereLight args={["#93c5fd", "#0b1030", 0.5]} />
+      <ambientLight intensity={0.5} color="#9fb0ff" />
+      <hemisphereLight args={["#93c5fd", "#0b1030", 0.55]} />
       <directionalLight
         position={[6, 12, 4]}
-        intensity={1.5}
+        intensity={1.6}
         castShadow
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
@@ -71,6 +85,7 @@ export function Environment() {
       />
 
       <Backdrop />
+      <Scenery />
 
       {/* Floor: receives shadows only, sits below the play field. */}
       <mesh

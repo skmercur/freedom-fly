@@ -1,8 +1,11 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { useRef } from "react";
+import { Suspense, useRef } from "react";
 import * as THREE from "three";
+import { Airplane } from "@/game/entities/Airplane";
+import { ModelPlayer } from "@/game/entities/ModelPlayer";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { input } from "@/game/systems/input";
 import { runtime } from "@/game/systems/runtime";
 import { clamp, damp } from "@/lib/math";
@@ -10,6 +13,7 @@ import {
   BOUND_X,
   BOUND_Y,
   COLORS,
+  PLAYER_MODEL_URL,
   PLAYER_SMOOTH,
   PLAYER_SPEED,
   PLAYER_Z,
@@ -78,40 +82,22 @@ export function Player() {
   return (
     <group ref={group}>
       <group ref={ship}>
-        {/* Nose cone pointing forward (-Z). */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow>
-          <coneGeometry args={[0.42, 1.3, 6]} />
-          <meshStandardMaterial
-            color={COLORS.player}
-            emissive={COLORS.player}
-            emissiveIntensity={0.9}
-            metalness={0.5}
-            roughness={0.25}
-          />
-        </mesh>
-        {/* Glowing core. */}
-        <mesh>
-          <icosahedronGeometry args={[0.24, 0]} />
-          <meshStandardMaterial
-            color="#ffffff"
-            emissive={COLORS.player}
-            emissiveIntensity={2.4}
-          />
-        </mesh>
-        {/* Wings. */}
-        <mesh position={[0, -0.05, 0.35]} castShadow>
-          <boxGeometry args={[1.5, 0.06, 0.5]} />
-          <meshStandardMaterial
-            color={COLORS.player}
-            emissive={COLORS.player}
-            emissiveIntensity={0.5}
-            metalness={0.6}
-            roughness={0.3}
-          />
-        </mesh>
+        {/* The craft: a valid glTF model if configured, else the procedural
+            airplane. The model is lazy-loaded and falls back to the procedural
+            plane if it is missing or fails to load. */}
+        {PLAYER_MODEL_URL ? (
+          <Suspense fallback={<Airplane />}>
+            <ErrorBoundary label="PlayerModel" fallback={<Airplane />}>
+              <ModelPlayer />
+            </ErrorBoundary>
+          </Suspense>
+        ) : (
+          <Airplane />
+        )}
+
         {/* Shield bubble (only visible while the shield power-up is active). */}
         <mesh ref={shield} visible={false}>
-          <sphereGeometry args={[1.05, 20, 20]} />
+          <sphereGeometry args={[1.3, 20, 20]} />
           <meshStandardMaterial
             color={COLORS.shield}
             emissive={COLORS.shield}

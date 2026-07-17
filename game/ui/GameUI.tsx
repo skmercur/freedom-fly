@@ -23,6 +23,14 @@ export function GameUI() {
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden font-sans text-white">
+      {/* Vignette (bloom lives in WebGPU; this focuses the frame in the DOM). */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          boxShadow: "inset 0 0 180px 40px rgba(0,0,0,0.7)",
+        }}
+      />
+
       {(phase === "playing" || phase === "paused") && <HUD />}
       {isTouch && phase === "playing" && <Joystick />}
 
