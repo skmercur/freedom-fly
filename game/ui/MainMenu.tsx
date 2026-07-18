@@ -55,6 +55,7 @@ export function MainMenu() {
           <ControlRow keys="Z / S" action="Throttle up / down" />
           <ControlRow keys="Q / D" action="Rudder (yaw)" />
           <ControlRow keys="1 – 4" action="Throttle presets" />
+          <ControlRow keys="F / G" action="Flaps down / up" />
           <ControlRow keys="Esc" action="Pause" />
         </div>
 

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { setKeyboardAxes, setThrottleTarget } from "@/game/systems/input";
+import { extendFlaps, retractFlaps } from "@/game/systems/flight";
 import { useGameStore } from "@/stores/gameStore";
 
 /**
@@ -12,6 +13,7 @@ import { useGameStore } from "@/stores/gameStore";
  *   W·Z / S          throttle up / down   (Z = AZERTY's "W")
  *   A·Q / D·E        rudder (yaw left / right)  (Q = AZERTY's "A")
  *   1–4              throttle presets (idle / 50% / 75% / full)
+ *   F / G            flaps down / up one notch
  *   Esc              pause in flight; back to menu elsewhere
  */
 const PITCH_UP = new Set(["arrowup"]);
@@ -67,6 +69,14 @@ export function useKeyboard(): void {
       if (e.repeat) return;
       if (k in THROTTLE_PRESETS) {
         setThrottleTarget(THROTTLE_PRESETS[k]);
+        return;
+      }
+      if (k === "f") {
+        extendFlaps();
+        return;
+      }
+      if (k === "g") {
+        retractFlaps();
         return;
       }
       if (k.startsWith("arrow")) e.preventDefault(); // stop page scroll

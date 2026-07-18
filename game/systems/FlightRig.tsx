@@ -9,14 +9,16 @@ import {
   initPhysics,
   setBodyLinvel,
   setBodyTranslation,
+  teleportBody,
 } from "@/game/systems/physics";
-import { groundHeightAt } from "@/game/systems/terrain";
+import { groundHeightAt, terrainReady } from "@/game/systems/terrain";
 import { pollGamepad } from "@/game/systems/gamepad";
 import { setMouseAxes } from "@/game/systems/input";
 import { addTrauma, stepTrauma } from "@/game/effects/shake";
 import { audio } from "@/lib/audio";
 import { useGameStore } from "@/stores/gameStore";
 import { useSettingsStore } from "@/stores/settingsStore";
+import type { CrashReason } from "@/types/game";
 import {
   CAMERA_DISTANCE,
   CAMERA_HEIGHT,
@@ -121,13 +123,17 @@ export function FlightRig() {
   const rig = useRef<THREE.Group>(null);
   const phase = useGameStore((s) => s.phase);
   const flightId = useGameStore((s) => s.flightId);
+  const spawnedOnTerrain = useRef(false);
 
   // A fresh aircraft per flightId: fires at mount (parked menu plane) and on
   // every take-off/respawn — but NOT on pause/resume, which keeps flightId.
   useEffect(() => {
     spawn();
-    // Kick off the Rapier WASM load (no-op after the first call). The spawn
-    // transform is snapshotted because the flight state keeps being mirrored.
+    // Kick off the Rapier WASM load (no-op after the first call), then snap
+    // the body to the *current* flight state: if loading outlasted a
+    // take-off/respawn, the transform captured at call time is stale — the
+    // body would otherwise materialize at the mount-time position (probed
+    // before the terrain existed, i.e. possibly underground) and crash.
     void initPhysics(
       { x: flight.position.x, y: flight.position.y, z: flight.position.z },
       {
@@ -136,7 +142,9 @@ export function FlightRig() {
         z: flight.quaternion.z,
         w: flight.quaternion.w,
       },
-    );
+    ).then(() => {
+      teleportBody(flight.position, flight.quaternion, flight.velocity);
+    });
   }, [flightId]);
 
   // Auto-respawn a short beat after crashing.
@@ -197,6 +205,14 @@ export function FlightRig() {
     const store = useGameStore.getState();
     const flying = store.phase === "flying";
 
+    // The mount-time spawn ran before the terrain streamed in, so the parked
+    // menu plane sits at a guessed altitude (possibly inside a mountain).
+    // Re-spawn once, as soon as the ground can actually be probed.
+    if (!spawnedOnTerrain.current && terrainReady() && !flying) {
+      spawnedOnTerrain.current = true;
+      spawn();
+    }
+
     if (flying) {
       pollGamepad();
       stepFlight(dt);
@@ -237,10 +253,10 @@ export function FlightRig() {
             setBodyLinvel(flight.velocity);
             // Rolling into steep terrain is still a wreck.
             if (spread > LANDING_MAX_SLOPE * 2 && hSpeed > STALL_ROLL_SAFE) {
-              wreck();
+              wreck("terrain");
             }
           } else {
-            wreck();
+            wreck("terrain");
           }
         } else if (flight.grounded && height > GROUND_RELEASE) {
           flight.grounded = false; // lifted off again
@@ -253,6 +269,15 @@ export function FlightRig() {
       // Stall buffet: a stalled wing shakes the airframe (and the camera).
       if (flight.stalling && !flight.grounded) {
         addTrauma(STALL_BUFFET * dt);
+      }
+
+      // Overstress buffet grows with accumulated stress; at stress 1 the
+      // airframe lets go mid-air.
+      if (flight.overLimit) {
+        addTrauma((0.8 + flight.stress) * dt);
+      }
+      if (flight.overstressed) {
+        wreck("overstress");
       }
     }
 
@@ -334,9 +359,9 @@ export function FlightRig() {
 /** Horizontal roll speed below which hitting rough ground is forgiven. */
 const STALL_ROLL_SAFE = 8;
 
-/** Hard contact: hand the phase machine the crash and make it felt. */
-function wreck(): void {
-  useGameStore.getState().crash();
+/** End of flight: hand the phase machine the crash and make it felt. */
+function wreck(reason: CrashReason): void {
+  useGameStore.getState().crash(reason);
   audio().crash();
   addTrauma(1);
 }

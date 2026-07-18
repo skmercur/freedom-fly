@@ -4,9 +4,9 @@ import { useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { randRange } from "@/lib/math";
+import { wind } from "@/game/systems/wind";
 import {
   CLOUD_COUNT,
-  CLOUD_DRIFT,
   CLOUD_FIELD,
   CLOUD_MAX_Y,
   CLOUD_MIN_Y,
@@ -151,7 +151,9 @@ export function Clouds() {
       CLOUD_FIELD / 2;
     for (let i = 0; i < f.clouds.length; i++) {
       const base = f.bases[i];
-      base.x += CLOUD_DRIFT * delta;
+      // Clouds ride the same live wind the aero model flies in.
+      base.x += wind.x * delta;
+      base.z += wind.z * delta;
       f.clouds[i].position.set(
         cam.x + wrap(base.x - cam.x),
         base.y,

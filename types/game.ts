@@ -11,3 +11,6 @@ export type GamePhase =
   | "flying"
   | "paused"
   | "crashed";
+
+/** Why the flight ended — picks the crash overlay's message. */
+export type CrashReason = "terrain" | "overstress";

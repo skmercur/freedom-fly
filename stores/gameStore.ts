@@ -1,9 +1,11 @@
 import { create } from "zustand";
-import type { GamePhase } from "@/types/game";
+import type { CrashReason, GamePhase } from "@/types/game";
 import { resetInput } from "@/game/systems/input";
 
 interface GameState {
   phase: GamePhase;
+  /** What ended the last flight (shown by the crash overlay). */
+  crashReason: CrashReason;
   /** True once the player has taken off at least once (unlocks audio). */
   started: boolean;
   /**
@@ -15,8 +17,8 @@ interface GameState {
 
   /** Menu → in the air. The actual spawn is performed by <FlightRig>. */
   start: () => void;
-  /** Hard ground contact: freeze and show the crash overlay. */
-  crash: () => void;
+  /** End of flight (ground impact, airframe failure): freeze + overlay. */
+  crash: (reason?: CrashReason) => void;
   /** Put a fresh aircraft back in the air after a crash. */
   respawn: () => void;
   /** Freeze the sim mid-flight. */
@@ -31,6 +33,7 @@ interface GameState {
 
 export const useGameStore = create<GameState>((set, get) => ({
   phase: "loading",
+  crashReason: "terrain",
   started: false,
   flightId: 0,
 
@@ -39,9 +42,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     set((s) => ({ phase: "flying", started: true, flightId: s.flightId + 1 }));
   },
 
-  crash: () => {
+  crash: (reason = "terrain") => {
     if (get().phase !== "flying") return;
-    set({ phase: "crashed" });
+    set({ phase: "crashed", crashReason: reason });
   },
 
   respawn: () => {

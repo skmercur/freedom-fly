@@ -76,9 +76,43 @@ export const THRUST_MAX = 20;
 export const THRUST_SPEED_DROP = 180;
 /** Atmospheric scale height: air density falls off as e^(-alt / H). */
 export const AIR_DENSITY_H = 8500;
-/** Constant wind field (units/s along +x/+z). Matches the cloud drift. */
-export const WIND_X = 6;
-export const WIND_Z = 0;
+
+// --- Wind ------------------------------------------------------------------
+/** Mean wind speed (units/s). The live wind wanders around this. */
+export const WIND_BASE_SPEED = 6;
+/** Peak extra speed the gust envelope can add on top of the mean. */
+export const WIND_GUST = 5;
+/** Amplitude of the gentle vertical turbulence component (units/s). */
+export const WIND_VERTICAL = 1.4;
+
+// --- Airframe stress -------------------------------------------------------
+/**
+ * Structural g-limits (Cessna-utility-ish). Beyond them the airframe buffets
+ * and accumulates stress; at stress 1 the wings let go. Stress also builds
+ * from flying with flaps out above FLAP_MAX_SPEED.
+ */
+export const G_LIMIT_POS = 4.4;
+export const G_LIMIT_NEG = -1.8;
+/** Stress accumulated per second, per g beyond the limit. */
+export const STRESS_RATE = 0.5;
+/** Stress shed per second once back inside the envelope. */
+export const STRESS_RECOVER = 0.35;
+
+// --- Flaps -----------------------------------------------------------------
+/** Flap notches shown on the HUD (degrees); index = notch. */
+export const FLAP_NOTCH_DEG = [0, 10, 25, 40] as const;
+/** Extra lift coefficient at full deflection (camber increase). */
+export const FLAP_CL = 0.006;
+/** Extra drag coefficient at full deflection (quadratic in deflection). */
+export const FLAP_CD = 0.004;
+/** Flap travel rate (fraction of full deflection per second). */
+export const FLAP_SPEED = 0.35;
+/** Nose-down trim torque at full deflection. */
+export const FLAP_PITCH_TRIM = 0.06;
+/** Max flaps-extended airspeed (VFE, units/s) — faster = airframe stress. */
+export const FLAP_MAX_SPEED = 55;
+/** Stress per second at full flaps ~20 units/s past VFE. */
+export const FLAP_OVERSPEED_STRESS = 0.4;
 
 // --- Wing: lift & drag coefficients --------------------------------------
 /** Lift-curve slope: CL per radian of angle of attack (pre-stall). */
@@ -174,8 +208,6 @@ export const CLOUD_FIELD = 5600;
 /** Cloud altitude band (world units). */
 export const CLOUD_MIN_Y = 420;
 export const CLOUD_MAX_Y = 980;
-/** Wind drift applied to clouds (units/s, along +x). */
-export const CLOUD_DRIFT = 6;
 
 // --- Chase camera --------------------------------------------------------
 /**
@@ -184,11 +216,11 @@ export const CLOUD_DRIFT = 6;
  * world-up, so rolling the aircraft doesn't swing the camera around.
  */
 /** How far behind the aircraft the camera rides (world units). */
-export const CAMERA_DISTANCE = 22;
+export const CAMERA_DISTANCE = 14;
 /** How high above the aircraft the camera rides (world units). */
-export const CAMERA_HEIGHT = 6;
+export const CAMERA_HEIGHT = 4;
 /** How far ahead of the aircraft the camera looks (world units). */
-export const CAMERA_LOOK_AHEAD = 12;
+export const CAMERA_LOOK_AHEAD = 10;
 /** Position smoothing (higher = snappier follow). */
 export const CAMERA_SMOOTH = 5;
 /** The chase cam never dips closer than this to the terrain (world units). */

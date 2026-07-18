@@ -1,4 +1,5 @@
 import { setGamepadAxes } from "@/game/systems/input";
+import { extendFlaps, retractFlaps } from "@/game/systems/flight";
 
 /**
  * Gamepad flight controls, polled once per frame from the flight rig (the
@@ -7,11 +8,15 @@ import { setGamepadAxes } from "@/game/systems/input";
  *   Left stick      roll / pitch (push forward = nose down, flight-sim style)
  *   Right stick X   rudder
  *   Right trigger   throttle up · Left trigger  throttle down
+ *   D-pad down/up   flaps down / up one notch (edge-triggered)
  */
 const DEADZONE = 0.15;
 
 const dz = (v: number): number =>
   Math.abs(v) < DEADZONE ? 0 : (v - Math.sign(v) * DEADZONE) / (1 - DEADZONE);
+
+let prevDpadDown = false;
+let prevDpadUp = false;
 
 export function pollGamepad(): void {
   if (typeof navigator === "undefined" || !navigator.getGamepads) return;
@@ -28,4 +33,11 @@ export function pollGamepad(): void {
     yaw: dz(pad.axes[2] ?? 0),
     throttle: rt - lt,
   });
+
+  const dpadDown = pad.buttons[13]?.pressed ?? false;
+  const dpadUp = pad.buttons[12]?.pressed ?? false;
+  if (dpadDown && !prevDpadDown) extendFlaps();
+  if (dpadUp && !prevDpadUp) retractFlaps();
+  prevDpadDown = dpadDown;
+  prevDpadUp = dpadUp;
 }

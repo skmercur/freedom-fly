@@ -10,8 +10,21 @@ import { HUD } from "./HUD";
 import { TouchControls } from "./TouchControls";
 import { Button, GlassPanel } from "./primitives";
 
-/** Brief "you hit the ground" overlay shown before the auto-respawn. */
+const CRASH_TEXT = {
+  terrain: {
+    title: "Terrain contact",
+    detail: "Respawning…",
+  },
+  overstress: {
+    title: "Airframe failure",
+    detail: "Too much stress — the wings gave way. Respawning…",
+  },
+} as const;
+
+/** Brief end-of-flight overlay shown before the auto-respawn. */
 function CrashOverlay() {
+  const reason = useGameStore((s) => s.crashReason);
+  const text = CRASH_TEXT[reason];
   return (
     <motion.div
       key="crashed"
@@ -22,9 +35,9 @@ function CrashOverlay() {
     >
       <div className="rounded-2xl border border-white/10 bg-black/40 px-8 py-5 text-center backdrop-blur">
         <div className="text-2xl font-black tracking-tight text-white">
-          Terrain contact
+          {text.title}
         </div>
-        <div className="mt-1 text-sm text-white/60">Respawning…</div>
+        <div className="mt-1 text-sm text-white/60">{text.detail}</div>
       </div>
     </motion.div>
   );
