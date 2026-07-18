@@ -12,6 +12,20 @@ export const AIRCRAFT_MODEL_URL = "/models/cessna.glb";
 /** The terrain the aircraft flies over. Auto-scaled to TERRAIN_SIZE. */
 export const TERRAIN_MODEL_URL = "/models/terrain.glb";
 
+/** The home runway, placed on the terrain near the spawn point. */
+export const RUNWAY_MODEL_URL = "/models/runway.glb";
+/** Longest dimension (strip length) the runway model is scaled to. */
+export const RUNWAY_SIZE = 420;
+/**
+ * The runway asset's strip runs along its local +x; yaw it 90° so the strip
+ * lies along world z — the spawn heading, so you take off and land straight
+ * down the centreline. [x, y, z] Euler radians.
+ */
+export const RUNWAY_ROTATION: [number, number, number] = [0, Math.PI / 2, 0];
+/** Where the runway centre sits (world x/z) — right under the air spawn. */
+export const RUNWAY_X = 0;
+export const RUNWAY_Z = 700;
+
 /** Longest dimension the aircraft model is scaled to (world units). */
 export const AIRCRAFT_SIZE = 10;
 /**
