@@ -41,6 +41,7 @@ export function HUD() {
   const speedRef = useRef<HTMLSpanElement>(null);
   const altRef = useRef<HTMLSpanElement>(null);
   const thrRef = useRef<HTMLSpanElement>(null);
+  const gRef = useRef<HTMLSpanElement>(null);
   const timeRef = useRef<HTMLSpanElement>(null);
   const stallRef = useRef<HTMLDivElement>(null);
   const groundRef = useRef<HTMLDivElement>(null);
@@ -59,6 +60,8 @@ export function HUD() {
         ).toString();
       if (thrRef.current)
         thrRef.current.textContent = Math.round(flight.throttle * 100).toString();
+      if (gRef.current)
+        gRef.current.textContent = flight.gForce.toFixed(1);
       if (timeRef.current) {
         const t = Math.floor(flight.flightTime);
         const m = Math.floor(t / 60);
@@ -87,10 +90,11 @@ export function HUD() {
         </div>
       </div>
 
-      {/* Bottom-left: airspeed + throttle */}
+      {/* Bottom-left: airspeed + throttle + load factor */}
       <div className="absolute bottom-6 left-6 flex items-end gap-6">
         <Gauge label="Airspeed" unit="kt" valueRef={speedRef} />
         <Gauge label="Throttle" unit="%" valueRef={thrRef} />
+        <Gauge label="Load" unit="g" valueRef={gRef} />
       </div>
 
       {/* Bottom-right: altitude */}

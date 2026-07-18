@@ -15,7 +15,7 @@ Source: [https://github.com/skmercur/freedom-fly](https://github.com/skmercur/fr
 
 ## Features
 
-- **Real-time flight physics** — lift, drag, thrust, gravity, stalls and ground effect, integrated per frame.
+- **Real-time 6-DoF flight physics** — angle-of-attack lift with true stalls, parasitic + induced drag, prop thrust that fades with airspeed and altitude, wind, ground effect, adverse yaw, engine torque and rotational inertia, integrated per frame.
 - **Endless world** — terrain and clouds wrap around the camera, so you never run out of sky.
 - **Land anywhere flat enough** — touch down gently, wings level, on shallow ground and you roll out safely; steep or fast contact is a crash.
 - **Realistic landings & takeoffs** — sink-rate, up-vector and slope checks decide whether contact is a landing or a wreck.
@@ -64,7 +64,7 @@ Then open [http://localhost:3000](http://localhost:3000).
 | **Gamepad**      | Left stick = pitch/roll, triggers = throttle |
 | **Touch**        | Left thumb-stick = roll/pitch, right rail = throttle |
 
-Keep your airspeed up — fly too slow and the wing **stalls**. Touch down gently, wings level, and you can **land** and take off again.
+Keep your angle of attack in check — pull too hard or fly too slow and the wing **stalls** (you'll feel the buffet). Turns are flown by banking: the lift vector tilts and the nose comes around. Touch down gently, wings level, and you can **land** and take off again.
 
 ## Project Structure
 

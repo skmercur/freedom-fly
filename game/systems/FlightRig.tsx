@@ -29,6 +29,7 @@ import {
   PROBE_NOSE,
   PROBE_WING,
   RESPAWN_DELAY,
+  STALL_BUFFET,
   START_ALTITUDE,
   START_SPEED,
 } from "@/lib/constants";
@@ -229,6 +230,11 @@ export function FlightRig() {
         flight.grounded = false; // rolled off the world edge somehow
       }
       if (flight.grounded) flight.stalling = false;
+
+      // Stall buffet: a stalled wing shakes the airframe (and the camera).
+      if (flight.stalling && !flight.grounded) {
+        addTrauma(STALL_BUFFET * dt);
+      }
     }
 
     // Apply the airframe transform to the visible model.

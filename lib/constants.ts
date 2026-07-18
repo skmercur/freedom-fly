@@ -59,43 +59,85 @@ export const PROP_BLUR_FULL = 0.85;
 export const PROP_BLUR_DISC_OPACITY = 0.42;
 
 // --- Flight physics ------------------------------------------------------
+/**
+ * The aero model works in normalised units: the aircraft has unit mass and
+ * unit wing area, so forces are accelerations and the lift equation reads
+ * `lift = q · CL` with dynamic pressure `q = ½ · ρ · V²`. Constants are tuned
+ * for a Cessna-like feel: stall ~35 kt, cruise ~80, top speed ~128.
+ */
 /** Gravitational acceleration (units/s²). */
 export const GRAVITY = 9.8;
-/** Max thrust acceleration at full throttle (units/s²). */
-export const THRUST_MAX = 16;
+/** Static propeller thrust acceleration at full throttle (units/s²). */
+export const THRUST_MAX = 20;
 /**
- * Lift coefficient: lift accel = LIFT_K · forwardSpeed². Tuned so lift balances
- * gravity right around the cruise/START speed, for stable hands-off flight.
+ * Airspeed at which propeller thrust has fallen to ~30% of static. A prop
+ * loses bite as the inflow speeds up, so top speed is self-limiting.
  */
-export const LIFT_K = 0.00153;
-/** Drag coefficient: drag accel = DRAG_K · |v| · v (quadratic). */
-export const DRAG_K = 0.0008;
-/**
- * Below this forward airspeed the wing stalls and lift collapses, so the nose
- * drops — you have to build speed back up to recover.
- */
-export const STALL_SPEED = 38;
-/** Airspeed at which control surfaces reach full authority. */
-export const CONTROL_REF_SPEED = 65;
+export const THRUST_SPEED_DROP = 180;
+/** Atmospheric scale height: air density falls off as e^(-alt / H). */
+export const AIR_DENSITY_H = 8500;
+/** Constant wind field (units/s along +x/+z). Matches the cloud drift. */
+export const WIND_X = 6;
+export const WIND_Z = 0;
 
-// --- Control rates (rad/s at full authority) -----------------------------
-export const PITCH_RATE = 1.15;
-export const ROLL_RATE = 2.4;
+// --- Wing: lift & drag coefficients --------------------------------------
+/** Lift-curve slope: CL per radian of angle of attack (pre-stall). */
+export const CL_ALPHA = 0.065;
+/** Maximum lift coefficient, reached at the critical angle of attack. */
+export const CL_MAX = 0.016;
+/** Post-stall plateau: a deeply stalled wing still produces this much CL. */
+export const CL_RECOVER = 0.01;
+/** Critical angle of attack in degrees — past this the wing stalls. */
+export const STALL_ALPHA = 14;
+/** Parasitic + fixed-gear drag coefficient (drag accel = q · CD). */
+export const DRAG_K = 0.0012;
+/** Induced drag factor: CD_induced = DRAG_INDUCED_K · CL². */
+export const DRAG_INDUCED_K = 40;
+
+// --- Ground effect --------------------------------------------------------
+/** Below this height (≈ one wingspan) ground effect kicks in. */
+export const GROUND_EFFECT_SPAN = 18;
+/** Bonus lift fraction at zero height (fades linearly to zero at the span). */
+export const LIFT_GROUND_EFFECT = 0.15;
+
+// --- Control & angular dynamics ------------------------------------------
+/**
+ * Dynamic pressure at which the control surfaces reach full authority. Below
+ * it the controls get mushy; above it they stay twitchy (up to 1.5×).
+ */
+export const CONTROL_REF_Q = 2000;
+/** Pilot-commanded angular accelerations at full authority (rad/s²). */
+export const PITCH_RATE = 1.4;
+export const ROLL_RATE = 3.6;
 export const YAW_RATE = 0.55;
+/** Per-axis rotational inertia (higher = heavier, slower to respond). */
+export const INERTIA_PITCH = 1.2;
+export const INERTIA_ROLL = 0.7;
+export const INERTIA_YAW = 1.5;
+/** Angular damping (rate-proportional opposing torque). */
+export const PITCH_DAMPING = 1.2;
+export const ROLL_DAMPING = 1.5;
+export const YAW_DAMPING = 1.0;
+/** Natural pitch trim: gentle torque easing the nose toward the horizon. */
+export const PITCH_STABILITY = 0.25;
+/** Weathervane stability: yaw torque that kills sideslip (flies nose-into-wind). */
+export const YAW_STABILITY = 0.4;
+/** Wings-level torque when the pilot isn't rolling (spiral stability). */
+export const ROLL_LEVEL_RATE = 0.9;
+/** Adverse yaw: how much a rolling moment yaws the nose away from the roll. */
+export const ADVERSE_YAW = 0.08;
+/** Engine torque & P-factor: roll/yaw couple proportional to throttle². */
+export const TORQUE_FACTOR = 0.02;
 /** How quickly the throttle eases toward its target setting (per second). */
 export const THROTTLE_RESPONSE = 0.6;
-
-/**
- * Stability augmentation. When the player isn't actively rolling/pitching, the
- * airframe eases back toward wings-level and horizon-level so it flies straight
- * hands-off instead of holding a bank and spiralling away. Higher = firmer.
- */
-export const ROLL_LEVEL_RATE = 2.4;
-export const PITCH_LEVEL_RATE = 1.1;
+/** Camera-shake trauma fed per second while the wing is stalled (buffet). */
+export const STALL_BUFFET = 0.6;
 
 // --- Starting state ------------------------------------------------------
 /** Throttle at spawn (0..1). Trimmed so thrust ≈ drag at START_SPEED. */
-export const START_THROTTLE = 0.35;
+export const START_THROTTLE = 0.45;
+/** Airspeed below which the gear resists pitching up (rotate speed). */
+export const ROTATE_SPEED = 42;
 /** Forward airspeed at spawn (units/s). */
 export const START_SPEED = 80;
 /** Height above the ground directly below the spawn point (world units). */
