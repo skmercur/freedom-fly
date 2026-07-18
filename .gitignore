@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# raw, uncompressed model source (137MB) — only the meshopt-compressed
+# terrain2.min.glb is shipped. See AGENTS.md / Landmarks.tsx.
+/public/models/terrain2.glb

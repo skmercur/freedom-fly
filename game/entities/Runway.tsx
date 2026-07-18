@@ -6,29 +6,19 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import {
-  addGroundCollider,
-  groundHeightAt,
-  removeGroundCollider,
-  terrainReady,
-} from "@/game/systems/terrain";
-import {
-  RUNWAY_MODEL_URL,
-  RUNWAY_ROTATION,
-  RUNWAY_SIZE,
-  RUNWAY_X,
-  RUNWAY_Z,
-} from "@/lib/constants";
+import { addGroundCollider, removeGroundCollider } from "@/game/systems/terrain";
+import { homeBase, resolveHomeBase } from "@/game/systems/homeBase";
+import { RUNWAY_MODEL_URL, RUNWAY_ROTATION, RUNWAY_SIZE } from "@/lib/constants";
 
 /**
  * The home airstrip, directly under the air-spawn point so there is always a
  * proper place to land and take off from.
  *
- * Placement has to wait for the terrain: the strip sits at the *highest*
- * ground probed along its centreline (so it never ends up buried in a rise),
- * bottom flush with that height. Once placed it registers as a ground
- * collider, which makes its surface landable — the probes return the nearest
- * hit from above, i.e. the runway deck rather than the terrain beneath it.
+ * Placement has to wait for the terrain: the home base picks the flattest
+ * patch of `terrain.glb` near the nominal point (see homeBase), and the strip
+ * sits there with its deck flush on that ground. Once placed it registers as a
+ * ground collider, which makes its surface landable — the probes return the
+ * nearest hit from above, i.e. the runway deck rather than the terrain beneath.
  */
 function RunwayModel() {
   const gltf = useLoader(GLTFLoader, RUNWAY_MODEL_URL, (loader) => {
@@ -63,15 +53,13 @@ function RunwayModel() {
   const registered = useRef<THREE.Object3D | null>(null);
 
   useFrame(() => {
-    if (placed.current || !terrainReady() || !group.current) return;
-    // Highest terrain along the centreline, so no part of the strip buries.
-    let ground = -Infinity;
-    for (const dz of [-0.35, 0, 0.35]) {
-      const h = groundHeightAt(RUNWAY_X, RUNWAY_Z + dz * RUNWAY_SIZE);
-      if (Number.isFinite(h)) ground = Math.max(ground, h);
-    }
-    if (!Number.isFinite(ground)) return;
-    group.current.position.set(RUNWAY_X, ground - bottomY + 0.2, RUNWAY_Z);
+    if (placed.current || !group.current) return;
+    if (!resolveHomeBase()) return; // wait for the flat-patch search
+    group.current.position.set(
+      homeBase.x,
+      homeBase.ground - bottomY + 0.2,
+      homeBase.z,
+    );
     group.current.visible = true;
     placed.current = true;
     addGroundCollider(group.current);

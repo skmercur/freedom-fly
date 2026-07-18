@@ -12,6 +12,25 @@ export const AIRCRAFT_MODEL_URL = "/models/cessna.glb";
 /** The terrain the aircraft flies over. Auto-scaled to TERRAIN_SIZE. */
 export const TERRAIN_MODEL_URL = "/models/terrain.glb";
 
+/**
+ * Extra scenery model, scattered as big landmark features (mountains/mesas)
+ * over the base terrain to break up the horizon. Compressed from the raw
+ * terrain2.glb via the project's gltf-transform pipeline (see AGENTS.md).
+ */
+export const LANDMARK_MODEL_URL = "/models/terrain2.min.glb";
+/** Longest dimension one scattered landmark is scaled to (world units). */
+export const LANDMARK_SIZE = 2200;
+/** World size of one scatter cell — at most one landmark per cell. */
+export const LANDMARK_CELL = 3200;
+/** Cells out from the player's cell that are populated each way (a square). */
+export const LANDMARK_RADIUS = 2;
+/** Fraction of cells that actually get a landmark (deterministic per cell). */
+export const LANDMARK_DENSITY = 0.5;
+/** Keep this clear around the home base so no landmark buries the runway. */
+export const LANDMARK_HOME_CLEAR = 1600;
+/** Sink each landmark's base this far into the ground so it merges cleanly. */
+export const LANDMARK_SINK = 45;
+
 /** The home runway, placed on the terrain near the spawn point. */
 export const RUNWAY_MODEL_URL = "/models/runway.glb";
 /** Longest dimension (strip length) the runway model is scaled to. */

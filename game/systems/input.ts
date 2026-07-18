@@ -28,7 +28,17 @@ export const input: InputAxes = zeroAxes();
 const keyboard = zeroAxes();
 const gamepad = zeroAxes();
 const stick = { pitch: 0, roll: 0 };
-const mouse = { pitch: 0, roll: 0 };
+const mouse = { pitch: 0, roll: 0, yaw: 0 };
+
+/**
+ * Coordinated-turn factor: horizontal mouse movement banks AND feeds rudder in
+ * the same direction, so aiming left rolls left and swings the nose left
+ * together (a coordinated turn) instead of a flat skid. Yaw is a deliberately
+ * weak axis in the aero model (YAW_RATE ≪ ROLL_RATE), so this rides high to
+ * make the rudder actually felt on horizontal mouse move. Turn it down toward 0
+ * for gentler rudder, up to 1 for full-authority rudder with the bank.
+ */
+const MOUSE_RUDDER = 0.85;
 
 /**
  * Absolute throttle request (0..1) from the touch slider or a preset key.
@@ -48,7 +58,7 @@ function recompute(): void {
     -1,
     1,
   );
-  input.yaw = clamp(keyboard.yaw + gamepad.yaw, -1, 1);
+  input.yaw = clamp(keyboard.yaw + gamepad.yaw + mouse.yaw, -1, 1);
   input.throttle = clamp(keyboard.throttle + gamepad.throttle, -1, 1);
 }
 
@@ -72,8 +82,10 @@ export function setStickAxis(x: number, y: number): void {
 
 /** Called by mouse steering: x = roll, y = pitch, already deadzoned/curved. */
 export function setMouseAxes(x: number, y: number): void {
-  mouse.roll = clamp(x, -1, 1);
+  const roll = clamp(x, -1, 1);
+  mouse.roll = roll;
   mouse.pitch = clamp(y, -1, 1);
+  mouse.yaw = roll * MOUSE_RUDDER; // coordinate the turn with the bank
   recompute();
 }
 
@@ -96,6 +108,7 @@ export function resetInput(): void {
   stick.roll = 0;
   mouse.pitch = 0;
   mouse.roll = 0;
+  mouse.yaw = 0;
   throttleTarget = null;
   recompute();
 }

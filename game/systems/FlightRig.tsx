@@ -12,6 +12,7 @@ import {
   teleportBody,
 } from "@/game/systems/physics";
 import { groundHeightAt, terrainReady } from "@/game/systems/terrain";
+import { homeBase, resolveHomeBase } from "@/game/systems/homeBase";
 import { pollGamepad } from "@/game/systems/gamepad";
 import { setMouseAxes } from "@/game/systems/input";
 import { addTrauma, stepTrauma } from "@/game/effects/shake";
@@ -41,9 +42,8 @@ import {
   START_SPEED,
 } from "@/lib/constants";
 
-// Where a fresh aircraft appears (world x/z) and which way it faces.
-const SPAWN_X = 0;
-const SPAWN_Z = 700;
+// A fresh aircraft appears above the home base (the flat patch the runway sits
+// on), facing down the strip so you can fly the pattern back to it.
 const SPAWN_HEADING = 0; // faces -Z, toward the terrain
 
 /** Once grounded, stay "grounded" until this high above the strip (hysteresis). */
@@ -81,11 +81,12 @@ const _boomRight = new THREE.Vector3();
 const FORWARD_LOCAL = new THREE.Vector3(0, 0, -1);
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
-/** Place a new aircraft above the ground at the spawn point. */
+/** Place a new aircraft above the ground over the home base. */
 function spawn(): void {
-  const ground = groundHeightAt(SPAWN_X, SPAWN_Z);
+  resolveHomeBase(); // pin the strip's flat patch if the terrain is ready
+  const ground = groundHeightAt(homeBase.x, homeBase.z);
   const base = Number.isFinite(ground) ? ground : 0;
-  _spawn.set(SPAWN_X, base + START_ALTITUDE, SPAWN_Z);
+  _spawn.set(homeBase.x, base + START_ALTITUDE, homeBase.z);
   resetFlight(_spawn, SPAWN_HEADING);
 }
 
@@ -183,8 +184,8 @@ export function FlightRig() {
       if (useGameStore.getState().phase !== "flying") return;
       const nx = (e.clientX / window.innerWidth) * 2 - 1;
       const ny = (e.clientY / window.innerHeight) * 2 - 1;
-      // Screen-up = climb, matching the touch stick.
-      setMouseAxes(mouseCurve(nx), mouseCurve(-ny));
+      // Inverted (yoke-style): push the mouse DOWN to climb, pull UP to dive.
+      setMouseAxes(mouseCurve(nx), mouseCurve(ny));
     };
     const onContextMenu = (e: Event) => e.preventDefault();
     window.addEventListener("pointerdown", onPointerDown);
