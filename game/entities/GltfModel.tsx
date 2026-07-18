@@ -4,6 +4,7 @@ import { useLoader } from "@react-three/fiber";
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 
 interface Props {
   url: string;
@@ -30,7 +31,11 @@ export function GltfModel({
   receiveShadow = false,
   onReady,
 }: Props) {
-  const gltf = useLoader(GLTFLoader, url);
+  // Models ship meshopt-compressed (EXT_meshopt_compression) to cut download
+  // size ~85%; the decoder is pure JS/WASM bundled with three, no extra files.
+  const gltf = useLoader(GLTFLoader, url, (loader) => {
+    loader.setMeshoptDecoder(MeshoptDecoder);
+  });
 
   const object = useMemo(() => {
     const root = gltf.scene.clone(true);

@@ -18,6 +18,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "three": "^0.185.1",
+    "three-mesh-bvh": "^0.9.11",
     "zustand": "^5.0.14"
   },
   "devDependencies": {

@@ -6,13 +6,23 @@ interface GameState {
   phase: GamePhase;
   /** True once the player has taken off at least once (unlocks audio). */
   started: boolean;
+  /**
+   * Increments every time a *fresh* aircraft should be spawned (take-off,
+   * respawn, restart). <FlightRig> keys its spawn effect on this, so resuming
+   * from pause — which only flips the phase — never teleports the plane.
+   */
+  flightId: number;
 
   /** Menu → in the air. The actual spawn is performed by <FlightRig>. */
   start: () => void;
-  /** Ground contact: freeze and show the crash overlay. */
+  /** Hard ground contact: freeze and show the crash overlay. */
   crash: () => void;
   /** Put a fresh aircraft back in the air after a crash. */
   respawn: () => void;
+  /** Freeze the sim mid-flight. */
+  pause: () => void;
+  /** Continue exactly where the sim was frozen. */
+  resume: () => void;
   /** Return to the title screen. */
   toMenu: () => void;
   /** Open the settings panel. */
@@ -22,10 +32,11 @@ interface GameState {
 export const useGameStore = create<GameState>((set, get) => ({
   phase: "loading",
   started: false,
+  flightId: 0,
 
   start: () => {
     resetInput();
-    set({ phase: "flying", started: true });
+    set((s) => ({ phase: "flying", started: true, flightId: s.flightId + 1 }));
   },
 
   crash: () => {
@@ -34,6 +45,17 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   respawn: () => {
+    resetInput();
+    set((s) => ({ phase: "flying", flightId: s.flightId + 1 }));
+  },
+
+  pause: () => {
+    if (get().phase !== "flying") return;
+    set({ phase: "paused" });
+  },
+
+  resume: () => {
+    if (get().phase !== "paused") return;
     resetInput();
     set({ phase: "flying" });
   },

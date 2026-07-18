@@ -2,8 +2,8 @@
 
 import { motion } from "framer-motion";
 
-/** First paint: animated logo + indeterminate progress bar. */
-export function LoadingScreen() {
+/** First paint: animated logo + real asset-download progress. */
+export function LoadingScreen({ progress = 0 }: { progress?: number }) {
   return (
     <motion.div
       className="pointer-events-auto absolute inset-0 flex flex-col items-center justify-center gap-8 bg-[#05060f]"
@@ -31,12 +31,15 @@ export function LoadingScreen() {
 
       <div className="h-1.5 w-56 overflow-hidden rounded-full bg-white/10">
         <motion.div
-          className="h-full w-1/3 rounded-full bg-gradient-to-r from-teal-400 to-cyan-400"
-          animate={{ x: ["-100%", "300%"] }}
-          transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
+          className="h-full rounded-full bg-gradient-to-r from-teal-400 to-cyan-400"
+          initial={{ width: "0%" }}
+          animate={{ width: `${Math.max(4, progress)}%` }}
+          transition={{ ease: "easeOut", duration: 0.3 }}
         />
       </div>
-      <p className="text-sm tracking-widest text-white/40">LOADING…</p>
+      <p className="text-sm tracking-widest text-white/40">
+        LOADING… {Math.round(progress)}%
+      </p>
     </motion.div>
   );
 }

@@ -8,9 +8,14 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Freedom Fly — Endless WebGL Flyer",
+  title: "Freedom Fly — Open-Sky Flight Sim",
   description:
-    "Weave through an endless neon void, chain combos, dodge asteroids and grab power-ups. A polished browser game built with React Three Fiber.",
+    "Take off, soar over the mountains and land where you dare. A free-flight sim in the browser — WebGPU, real stalls, real landings, no downloads.",
+  manifest: "/site.webmanifest",
+  icons: {
+    icon: [{ url: "/favicon-96x96.png", sizes: "96x96", type: "image/png" }],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 // Lock zoom/scale so touch controls feel like a native game.

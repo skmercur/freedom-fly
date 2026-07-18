@@ -3,6 +3,10 @@
 import { useEffect, useRef } from "react";
 import { flight } from "@/game/systems/flight";
 
+/** World units are ~metres; convert for aviation-style instruments. */
+const MS_TO_KT = 1.94384;
+const M_TO_FT = 3.28084;
+
 /** One instrument read-out (label + live value). */
 function Gauge({
   label,
@@ -37,22 +41,37 @@ export function HUD() {
   const speedRef = useRef<HTMLSpanElement>(null);
   const altRef = useRef<HTMLSpanElement>(null);
   const thrRef = useRef<HTMLSpanElement>(null);
+  const timeRef = useRef<HTMLSpanElement>(null);
   const stallRef = useRef<HTMLDivElement>(null);
+  const boundsRef = useRef<HTMLDivElement>(null);
+  const groundRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let raf = 0;
     const tick = () => {
       if (speedRef.current)
-        speedRef.current.textContent = Math.round(flight.airspeed).toString();
+        speedRef.current.textContent = Math.round(
+          flight.airspeed * MS_TO_KT,
+        ).toString();
       if (altRef.current)
         altRef.current.textContent = Math.max(
           0,
-          Math.round(flight.altitude),
+          Math.round(flight.altitude * M_TO_FT),
         ).toString();
       if (thrRef.current)
         thrRef.current.textContent = Math.round(flight.throttle * 100).toString();
+      if (timeRef.current) {
+        const t = Math.floor(flight.flightTime);
+        const m = Math.floor(t / 60);
+        const s = (t % 60).toString().padStart(2, "0");
+        timeRef.current.textContent = `${m}:${s}`;
+      }
       if (stallRef.current)
         stallRef.current.style.opacity = flight.stalling ? "1" : "0";
+      if (boundsRef.current)
+        boundsRef.current.style.opacity = flight.outOfBounds ? "1" : "0";
+      if (groundRef.current)
+        groundRef.current.style.opacity = flight.grounded ? "1" : "0";
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -61,6 +80,16 @@ export function HUD() {
 
   return (
     <div className="pointer-events-none absolute inset-0 p-5 sm:p-8">
+      {/* Top-left: flight time */}
+      <div className="absolute left-6 top-6 text-left">
+        <div className="text-[10px] uppercase tracking-[0.2em] text-white/50">
+          Flight time
+        </div>
+        <div className="font-mono text-xl font-bold tabular-nums text-white/85 drop-shadow">
+          <span ref={timeRef}>0:00</span>
+        </div>
+      </div>
+
       {/* Bottom-left: airspeed + throttle */}
       <div className="absolute bottom-6 left-6 flex items-end gap-6">
         <Gauge label="Airspeed" unit="kt" valueRef={speedRef} />
@@ -81,9 +110,27 @@ export function HUD() {
         ⚠ Stall — lower the nose
       </div>
 
-      {/* Top-right: back hint */}
+      {/* Center: leaving the play area */}
+      <div
+        ref={boundsRef}
+        style={{ opacity: 0, transition: "opacity 200ms" }}
+        className="absolute left-1/2 top-24 -translate-x-1/2 rounded-lg border border-amber-300/40 bg-amber-400/15 px-4 py-1.5 text-sm font-bold uppercase tracking-widest text-amber-100 backdrop-blur"
+      >
+        ⚠ Leaving the valley — turn back
+      </div>
+
+      {/* Center-bottom: on-ground hint */}
+      <div
+        ref={groundRef}
+        style={{ opacity: 0, transition: "opacity 200ms" }}
+        className="absolute bottom-28 left-1/2 -translate-x-1/2 rounded-lg bg-black/30 px-4 py-1.5 text-xs uppercase tracking-widest text-white/70 backdrop-blur"
+      >
+        On the ground — full throttle and pull up to take off
+      </div>
+
+      {/* Top-right: pause hint */}
       <div className="absolute right-6 top-6 text-[11px] uppercase tracking-widest text-white/40">
-        Esc — menu
+        Esc — pause
       </div>
     </div>
   );

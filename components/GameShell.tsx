@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef } from "react";
+import { useProgress } from "@react-three/drei";
 import { useGameStore } from "@/stores/gameStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useKeyboard } from "@/game/hooks/useKeyboard";
@@ -25,6 +26,7 @@ const GameCanvas = dynamic(
  */
 export function GameShell() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const phase = useGameStore((s) => s.phase);
   const toMenu = useGameStore((s) => s.toMenu);
   const soundEnabled = useSettingsStore((s) => s.soundEnabled);
   const musicEnabled = useSettingsStore((s) => s.musicEnabled);
@@ -33,13 +35,24 @@ export function GameShell() {
   // Global input: keyboard flight controls.
   useKeyboard();
 
-  // Boot: show the loading screen briefly, then reveal the menu.
+  // Boot: hold the loading screen until the models have actually downloaded
+  // (useProgress taps three's DefaultLoadingManager), with a floor so the
+  // screen doesn't flash on cached loads and a ceiling so a stalled or failed
+  // download can never trap the player on it.
+  const { active, progress, total } = useProgress();
+  const bootAt = useRef(0);
   useEffect(() => {
-    const id = setTimeout(() => {
-      if (useGameStore.getState().phase === "loading") toMenu();
-    }, 1500);
+    bootAt.current = Date.now();
+  }, []);
+  useEffect(() => {
+    if (phase !== "loading") return;
+    const ready = total > 0 && progress >= 100 && !active;
+    const wait = ready
+      ? Math.max(400, 1200 - (Date.now() - bootAt.current))
+      : 20000;
+    const id = setTimeout(toMenu, wait);
     return () => clearTimeout(id);
-  }, [toMenu]);
+  }, [phase, active, progress, total, toMenu]);
 
   // AudioContext can only start after a user gesture — unlock on first input.
   useEffect(() => {

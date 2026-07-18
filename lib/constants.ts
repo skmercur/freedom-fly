@@ -96,13 +96,34 @@ export const START_SPEED = 80;
 /** Height above the ground directly below the spawn point (world units). */
 export const START_ALTITUDE = 260;
 
-// --- Ground collision ----------------------------------------------------
-/** Crash when the craft comes within this height of the terrain below it. */
+// --- Ground contact: landing vs crashing ---------------------------------
+/** Ride height of the airframe over the terrain (belly clearance). */
 export const GROUND_CLEARANCE = 6;
-/** How far up to start the downward ground-probe ray (world units). */
+/** How far up to start the downward ground-probe rays (world units). */
 export const GROUND_PROBE_HEIGHT = 4000;
 /** Seconds the "crashed" overlay shows before auto-respawn. */
 export const RESPAWN_DELAY = 1.6;
+/**
+ * Touchdown tolerance. Contact is a *landing* (not a crash) when sink rate is
+ * below LANDING_MAX_SINK, the wings are close to level (airframe up-vector's
+ * world y above LANDING_MIN_UP) and the ground under nose/wingtips is even
+ * (height spread below LANDING_MAX_SLOPE). Anything harsher is a crash.
+ */
+export const LANDING_MAX_SINK = 9;
+export const LANDING_MIN_UP = 0.82;
+export const LANDING_MAX_SLOPE = 5;
+/** Rolling-friction deceleration while on the ground (units/s²). */
+export const GROUND_FRICTION = 6;
+/** Longitudinal offset of the nose ground-probe (world units). */
+export const PROBE_NOSE = 4.5;
+/** Lateral offset of the wingtip ground-probes (world units). */
+export const PROBE_WING = 5;
+
+// --- World bounds ---------------------------------------------------------
+/** Radius of the intended play area around the origin (world units). */
+export const WORLD_RADIUS = 1500;
+/** Strength of the gentle push back toward the valley when out of bounds. */
+export const BOUNDS_PUSH = 0.015;
 
 // --- Chase camera --------------------------------------------------------
 /**
@@ -118,6 +139,14 @@ export const CAMERA_HEIGHT = 6;
 export const CAMERA_LOOK_AHEAD = 12;
 /** Position smoothing (higher = snappier follow). */
 export const CAMERA_SMOOTH = 5;
+/** The chase cam never dips closer than this to the terrain (world units). */
+export const CAMERA_MIN_GROUND = 3;
+/** Base field of view (degrees)… */
+export const FOV_BASE = 62;
+/** …widened by up to this much as airspeed climbs, for a sense of speed. */
+export const FOV_SPEED_KICK = 11;
+/** Airspeed above cruise at which the FOV kick maxes out (units/s). */
+export const FOV_SPEED_RANGE = 90;
 
 // --- Palette -------------------------------------------------------------
 export const COLORS = {

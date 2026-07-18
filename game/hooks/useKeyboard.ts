@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { input } from "@/game/systems/input";
+import { setKeyboardAxes, setThrottleTarget } from "@/game/systems/input";
 import { useGameStore } from "@/stores/gameStore";
 
 /**
@@ -11,7 +11,8 @@ import { useGameStore } from "@/stores/gameStore";
  *   ← / →            roll (bank left / right)
  *   W·Z / S          throttle up / down   (Z = AZERTY's "W")
  *   A·Q / D·E        rudder (yaw left / right)  (Q = AZERTY's "A")
- *   Esc              back to menu
+ *   1–4              throttle presets (idle / 50% / 75% / full)
+ *   Esc              pause in flight; back to menu elsewhere
  */
 const PITCH_UP = new Set(["arrowup"]);
 const PITCH_DOWN = new Set(["arrowdown"]);
@@ -21,6 +22,12 @@ const YAW_LEFT = new Set(["a", "q"]);
 const YAW_RIGHT = new Set(["d", "e"]);
 const THROTTLE_UP = new Set(["w", "z"]);
 const THROTTLE_DOWN = new Set(["s"]);
+const THROTTLE_PRESETS: Record<string, number> = {
+  "1": 0,
+  "2": 0.5,
+  "3": 0.75,
+  "4": 1,
+};
 
 /** Normalize a KeyboardEvent to a lowercase label token. */
 const token = (e: KeyboardEvent) => e.key.toLowerCase();
@@ -44,20 +51,24 @@ export function useKeyboard(): void {
         if (THROTTLE_UP.has(k)) throttle += 1;
         if (THROTTLE_DOWN.has(k)) throttle -= 1;
       });
-      input.pitch = pitch;
-      input.roll = roll;
-      input.yaw = yaw;
-      input.throttle = throttle;
+      setKeyboardAxes({ pitch, roll, yaw, throttle });
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
       const k = token(e);
       if (k === "escape") {
         e.preventDefault();
-        useGameStore.getState().toMenu();
+        const store = useGameStore.getState();
+        if (store.phase === "flying") store.pause();
+        else if (store.phase === "paused") store.resume();
+        else if (store.phase === "settings") store.toMenu();
         return;
       }
       if (e.repeat) return;
+      if (k in THROTTLE_PRESETS) {
+        setThrottleTarget(THROTTLE_PRESETS[k]);
+        return;
+      }
       if (k.startsWith("arrow")) e.preventDefault(); // stop page scroll
       pressed.add(k);
       recompute();

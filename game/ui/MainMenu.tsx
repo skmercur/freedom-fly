@@ -46,12 +46,16 @@ export function MainMenu() {
           <ControlRow keys="← / →" action="Roll (bank)" />
           <ControlRow keys="Z / S" action="Throttle up / down" />
           <ControlRow keys="Q / D" action="Rudder (yaw)" />
+          <ControlRow keys="1 – 4" action="Throttle presets" />
+          <ControlRow keys="Esc" action="Pause" />
         </div>
 
         <p className="mt-5 text-[11px] leading-relaxed text-white/35">
           Keep your airspeed up — fly too slow and the wing{" "}
-          <span className="text-white/60">stalls</span>. Touch the ground and you
-          respawn in the air.
+          <span className="text-white/60">stalls</span>. Touch down gently,
+          wings level, and you can <span className="text-white/60">land</span>{" "}
+          and take off again. Gamepad and touch supported; hold the right mouse
+          button to look around.
         </p>
       </GlassPanel>
     </motion.div>

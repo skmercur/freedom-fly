@@ -4,7 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 import { WebGPURenderer } from "three/webgpu";
 import { Scene } from "@/game/systems/Scene";
-import { COLORS } from "@/lib/constants";
+import { COLORS, FOV_BASE } from "@/lib/constants";
 
 /**
  * WebGL**GPU** canvas.
@@ -22,9 +22,10 @@ export function GameCanvas() {
   return (
     <Canvas
       dpr={[1, 2]}
+      shadows
       camera={{
         position: [0, 266, 722],
-        fov: 62,
+        fov: FOV_BASE,
         near: 0.5,
         far: 8000,
       }}

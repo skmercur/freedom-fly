@@ -9,4 +9,5 @@ export type GamePhase =
   | "menu"
   | "settings"
   | "flying"
+  | "paused"
   | "crashed";

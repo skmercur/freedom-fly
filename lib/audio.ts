@@ -23,6 +23,13 @@ class AudioEngine {
   private nextNoteTime = 0;
   private step = 0;
 
+  // Continuous flight loop (engine drone + wind), driven per-frame by the sim.
+  private engineOsc: OscillatorNode | null = null;
+  private engineFilter: BiquadFilterNode | null = null;
+  private engineGain: GainNode | null = null;
+  private windFilter: BiquadFilterNode | null = null;
+  private windGain: GainNode | null = null;
+
   /** Create/resume the context. Must be called from a user gesture. */
   ensure(): void {
     if (typeof window === "undefined") return;
@@ -38,6 +45,7 @@ class AudioEngine {
       this.musicGain.connect(this.master);
       this.sfxGain.connect(this.master);
       this.master.connect(this.ctx.destination);
+      this.createFlightLoop();
       this.applyGains();
     }
     if (this.ctx.state === "suspended") void this.ctx.resume();
@@ -45,9 +53,82 @@ class AudioEngine {
 
   private applyGains(): void {
     if (!this.master || !this.musicGain || !this.sfxGain) return;
-    this.master.gain.value = this.enabled ? this.volume : 0;
+    this.master.gain.value = this.volume;
+    this.sfxGain.gain.value = this.enabled ? 0.9 : 0;
     this.musicGain.gain.value = this.musicEnabled ? 0.28 : 0;
-    this.sfxGain.gain.value = 0.9;
+  }
+
+  /**
+   * Build the always-running engine + wind voices (silent until the sim feeds
+   * them). Engine = detuned sawtooth pair through a low-pass, a piston-y
+   * rumble; wind = looped white noise through a band-pass that opens with
+   * airspeed. Both live under sfxGain so the SFX toggle silences them.
+   */
+  private createFlightLoop(): void {
+    if (!this.ctx || !this.sfxGain) return;
+    const t0 = this.ctx.currentTime;
+
+    this.engineGain = this.ctx.createGain();
+    this.engineGain.gain.value = 0;
+    this.engineFilter = this.ctx.createBiquadFilter();
+    this.engineFilter.type = "lowpass";
+    this.engineFilter.frequency.value = 220;
+    this.engineOsc = this.ctx.createOscillator();
+    this.engineOsc.type = "sawtooth";
+    this.engineOsc.frequency.value = 50;
+    const sub = this.ctx.createOscillator();
+    sub.type = "square";
+    sub.frequency.value = 50;
+    sub.detune.value = 8; // slight beat against the saw = mechanical texture
+    const subGain = this.ctx.createGain();
+    subGain.gain.value = 0.4;
+    this.engineOsc.connect(this.engineFilter);
+    sub.connect(subGain).connect(this.engineFilter);
+    this.engineFilter.connect(this.engineGain).connect(this.sfxGain);
+    this.engineOsc.start(t0);
+    sub.start(t0);
+
+    const seconds = 2;
+    const buffer = this.ctx.createBuffer(
+      1,
+      this.ctx.sampleRate * seconds,
+      this.ctx.sampleRate,
+    );
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+    this.windFilter = this.ctx.createBiquadFilter();
+    this.windFilter.type = "bandpass";
+    this.windFilter.frequency.value = 500;
+    this.windFilter.Q.value = 0.6;
+    this.windGain = this.ctx.createGain();
+    this.windGain.gain.value = 0;
+    noise.connect(this.windFilter).connect(this.windGain).connect(this.sfxGain);
+    noise.start(t0);
+  }
+
+  /**
+   * Per-frame update from the sim. `rpmFrac` is engine rpm as a fraction of
+   * redline; `speedFrac` is airspeed as a fraction of "fast". Values are eased
+   * with setTargetAtTime so per-frame stepping never zipper-clicks.
+   */
+  setFlightAudio(rpmFrac: number, speedFrac: number): void {
+    if (!this.ctx || !this.engineOsc) return;
+    const t = this.ctx.currentTime;
+    const ease = 0.06;
+    const running = rpmFrac > 0.02;
+    this.engineOsc.frequency.setTargetAtTime(42 + rpmFrac * 76, t, ease);
+    this.engineFilter!.frequency.setTargetAtTime(160 + rpmFrac * 700, t, ease);
+    this.engineGain!.gain.setTargetAtTime(
+      running ? 0.07 + 0.26 * rpmFrac : 0,
+      t,
+      ease,
+    );
+    const wind = Math.min(1, speedFrac);
+    this.windFilter!.frequency.setTargetAtTime(400 + wind * 1700, t, ease);
+    this.windGain!.gain.setTargetAtTime(wind * wind * 0.3, t, ease);
   }
 
   setVolume(v: number): void {
@@ -104,6 +185,22 @@ class AudioEngine {
     if (!this.enabled || !this.sfxGain) return;
     this.voice(180, 0.3, "sawtooth", 0.6, this.sfxGain);
     this.voice(90, 0.4, "square", 0.4, this.sfxGain, 0.02);
+  }
+
+  /** Terrain impact: a hard low boom with a metallic tail. */
+  crash(): void {
+    if (!this.enabled || !this.sfxGain) return;
+    this.voice(60, 0.9, "sine", 0.9, this.sfxGain);
+    this.voice(140, 0.5, "sawtooth", 0.7, this.sfxGain, 0.01);
+    this.voice(97, 0.7, "square", 0.35, this.sfxGain, 0.05);
+    this.voice(310, 0.25, "sawtooth", 0.3, this.sfxGain, 0.03);
+  }
+
+  /** Wheels-on-ground thump for a successful landing. */
+  touchdown(): void {
+    if (!this.enabled || !this.sfxGain) return;
+    this.voice(75, 0.22, "sine", 0.6, this.sfxGain);
+    this.voice(220, 0.1, "triangle", 0.25, this.sfxGain, 0.02);
   }
 
   power(): void {

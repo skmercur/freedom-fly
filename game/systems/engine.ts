@@ -1,6 +1,7 @@
 import { clamp, damp } from "@/lib/math";
 import { flight } from "@/game/systems/flight";
 import { useGameStore } from "@/stores/gameStore";
+import { audio } from "@/lib/audio";
 import type { PropellerVisual } from "@/game/entities/propeller";
 import {
   PROP_BLUR_DISC_OPACITY,
@@ -31,18 +32,20 @@ export function registerPropeller(v: PropellerVisual | null): void {
  * Advance the engine by `dt` seconds. Rpm eases from PROP_RPM_IDLE toward
  * PROP_RPM_MAX with throttle — the piston-engine feel from MSFS, including
  * the spool-up lag. The engine only "runs" in the flying phase: parked in the
- * menu and after a crash the prop winds down to a stop. As rpm climbs, the
- * physical blades cross-fade into the motion-blur disc.
+ * menu, paused, or after a crash the prop winds down to a stop. As rpm climbs,
+ * the physical blades cross-fade into the motion-blur disc. The rpm and
+ * airspeed also drive the synthesized engine-drone/wind loop.
  */
 export function stepEngine(dt: number): void {
-  if (!visual) return;
-
   const running = useGameStore.getState().phase === "flying";
   const target = running
     ? PROP_RPM_IDLE + flight.throttle * (PROP_RPM_MAX - PROP_RPM_IDLE)
     : 0;
   rpm = damp(rpm, target, PROP_RPM_SPOOL, dt);
 
+  audio().setFlightAudio(rpm / PROP_RPM_MAX, running ? flight.airspeed / 170 : 0);
+
+  if (!visual) return;
   visual.pivot.rotation.x += ((rpm / 60) * 2 * Math.PI) * dt;
 
   const blur = clamp(

@@ -16,7 +16,7 @@ import {
   THRUST_MAX,
   YAW_RATE,
 } from "@/lib/constants";
-import { input } from "@/game/systems/input";
+import { consumeThrottleTarget, input } from "@/game/systems/input";
 
 /**
  * Per-frame flight state.
@@ -43,6 +43,12 @@ export interface FlightState {
   altitude: number;
   /** True while forward airspeed is under the stall threshold. */
   stalling: boolean;
+  /** True while rolling on the ground after a landing (or before take-off). */
+  grounded: boolean;
+  /** True while outside WORLD_RADIUS — the HUD warns and the sim pushes back. */
+  outOfBounds: boolean;
+  /** Seconds airborne since the current flight started, for the HUD. */
+  flightTime: number;
   /** Whether the physics step should advance (false in menu / after a crash). */
   running: boolean;
 }
@@ -56,6 +62,9 @@ export const flight: FlightState = {
   airspeed: 0,
   altitude: 0,
   stalling: false,
+  grounded: false,
+  outOfBounds: false,
+  flightTime: 0,
   running: false,
 };
 
@@ -87,6 +96,9 @@ export function resetFlight(position: THREE.Vector3, heading = 0): void {
   flight.targetThrottle = START_THROTTLE;
   flight.airspeed = START_SPEED;
   flight.stalling = false;
+  flight.grounded = false;
+  flight.outOfBounds = false;
+  flight.flightTime = 0;
 }
 
 /**
@@ -106,6 +118,10 @@ export function stepFlight(dt: number): void {
   flight.stalling = forwardSpeed < STALL_SPEED;
 
   // --- Throttle ---
+  // Absolute requests (preset keys, touch slider) land first, then the
+  // rate-based keyboard/gamepad input keeps integrating on top.
+  const requested = consumeThrottleTarget();
+  if (requested !== null) flight.targetThrottle = requested;
   flight.targetThrottle = clamp(
     flight.targetThrottle + input.throttle * dt,
     0,
