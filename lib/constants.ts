@@ -14,8 +14,13 @@ export const TERRAIN_MODEL_URL = "/models/terrain.glb";
 
 /** Longest dimension the aircraft model is scaled to (world units). */
 export const AIRCRAFT_SIZE = 10;
-/** Longest dimension the terrain model is scaled to (world units). */
-export const TERRAIN_SIZE = 2600;
+/**
+ * Longest dimension one terrain tile is scaled to (world units). This sets the
+ * scale of the whole world relative to the aircraft: bigger terrain = taller
+ * mountains and a slower-feeling, more majestic sense of speed. The world is
+ * endless — this tile repeats around the player with mirrored edges.
+ */
+export const TERRAIN_SIZE = 6500;
 
 /**
  * Orientation fix-up applied to the aircraft model so its nose points along the
@@ -119,11 +124,16 @@ export const PROBE_NOSE = 4.5;
 /** Lateral offset of the wingtip ground-probes (world units). */
 export const PROBE_WING = 5;
 
-// --- World bounds ---------------------------------------------------------
-/** Radius of the intended play area around the origin (world units). */
-export const WORLD_RADIUS = 1500;
-/** Strength of the gentle push back toward the valley when out of bounds. */
-export const BOUNDS_PUSH = 0.015;
+// --- Sky ------------------------------------------------------------------
+/** Number of drifting cloud clusters kept alive around the camera. */
+export const CLOUD_COUNT = 34;
+/** Clouds live on a wrapping field this wide, centered on the camera. */
+export const CLOUD_FIELD = 5600;
+/** Cloud altitude band (world units). */
+export const CLOUD_MIN_Y = 420;
+export const CLOUD_MAX_Y = 980;
+/** Wind drift applied to clouds (units/s, along +x). */
+export const CLOUD_DRIFT = 6;
 
 // --- Chase camera --------------------------------------------------------
 /**

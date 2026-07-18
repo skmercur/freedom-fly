@@ -1,6 +1,6 @@
 "use client";
 
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { Aircraft } from "@/game/entities/Aircraft";
@@ -11,7 +11,6 @@ import { addTrauma, stepTrauma } from "@/game/effects/shake";
 import { audio } from "@/lib/audio";
 import { useGameStore } from "@/stores/gameStore";
 import {
-  BOUNDS_PUSH,
   CAMERA_DISTANCE,
   CAMERA_HEIGHT,
   CAMERA_LOOK_AHEAD,
@@ -30,7 +29,6 @@ import {
   RESPAWN_DELAY,
   START_ALTITUDE,
   START_SPEED,
-  WORLD_RADIUS,
 } from "@/lib/constants";
 
 // Where a fresh aircraft appears (world x/z) and which way it faces.
@@ -41,6 +39,12 @@ const SPAWN_HEADING = 0; // faces -Z, toward the terrain
 /** Once grounded, stay "grounded" until this high above the strip (hysteresis). */
 const GROUND_RELEASE = GROUND_CLEARANCE + 1.5;
 
+/**
+ * Free-look orbit offsets (radians), driven by right-mouse drag. Non-reactive
+ * module state, mutated by pointer handlers and eased every frame.
+ */
+const freeLook = { active: false, yaw: 0, pitch: 0 };
+
 const _spawn = new THREE.Vector3();
 const _camTarget = new THREE.Vector3();
 const _lookTarget = new THREE.Vector3();
@@ -49,7 +53,6 @@ const _right = new THREE.Vector3();
 const _up = new THREE.Vector3();
 const _boom = new THREE.Vector3();
 const _boomRight = new THREE.Vector3();
-const _toOrigin = new THREE.Vector3();
 const FORWARD_LOCAL = new THREE.Vector3(0, 0, -1);
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
@@ -93,11 +96,8 @@ function probeGround(): { ground: number; spread: number } {
  */
 export function FlightRig() {
   const rig = useRef<THREE.Group>(null);
-  const camera = useThree((s) => s.camera);
   const phase = useGameStore((s) => s.phase);
   const flightId = useGameStore((s) => s.flightId);
-  // Free-look orbit offsets (radians), driven by right-mouse drag.
-  const freeLook = useRef({ active: false, yaw: 0, pitch: 0 });
 
   // A fresh aircraft per flightId: fires at mount (parked menu plane) and on
   // every take-off/respawn — but NOT on pause/resume, which keeps flightId.
@@ -117,18 +117,17 @@ export function FlightRig() {
 
   // Right-mouse drag = free-look orbit around the aircraft; snaps back on release.
   useEffect(() => {
-    const fl = freeLook.current;
     const onPointerDown = (e: PointerEvent) => {
-      if (e.button === 2) fl.active = true;
+      if (e.button === 2) freeLook.active = true;
     };
     const onPointerUp = (e: PointerEvent) => {
-      if (e.button === 2) fl.active = false;
+      if (e.button === 2) freeLook.active = false;
     };
     const onPointerMove = (e: PointerEvent) => {
-      if (!fl.active) return;
-      fl.yaw -= e.movementX * 0.005;
-      fl.pitch = THREE.MathUtils.clamp(
-        fl.pitch + e.movementY * 0.004,
+      if (!freeLook.active) return;
+      freeLook.yaw -= e.movementX * 0.005;
+      freeLook.pitch = THREE.MathUtils.clamp(
+        freeLook.pitch + e.movementY * 0.004,
         -0.4,
         1.1,
       );
@@ -146,7 +145,8 @@ export function FlightRig() {
     };
   }, []);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
+    const camera = state.camera;
     const dt = Math.min(delta, 0.05);
     const store = useGameStore.getState();
     const flying = store.phase === "flying";
@@ -200,20 +200,6 @@ export function FlightRig() {
         flight.grounded = false; // rolled off the world edge somehow
       }
       if (flight.grounded) flight.stalling = false;
-
-      // --- World bounds: warn and gently push back toward the valley ---
-      const dist = Math.hypot(flight.position.x, flight.position.z);
-      flight.outOfBounds = dist > WORLD_RADIUS;
-      if (flight.outOfBounds) {
-        const over = dist - WORLD_RADIUS;
-        _toOrigin
-          .set(-flight.position.x, 0, -flight.position.z)
-          .normalize();
-        flight.velocity.addScaledVector(
-          _toOrigin,
-          Math.min(over * BOUNDS_PUSH, 25) * dt,
-        );
-      }
     }
 
     // Apply the airframe transform to the visible model.
@@ -226,18 +212,17 @@ export function FlightRig() {
     // Nose direction in world space drives where "behind" is; height comes from
     // world-up so banking doesn't roll the camera with the aircraft. Free-look
     // rotates the boom around the craft and eases back when released.
-    const fl = freeLook.current;
-    if (!fl.active) {
-      const k = 1 - Math.exp(-6 * dt);
-      fl.yaw += (0 - fl.yaw) * k;
-      fl.pitch += (0 - fl.pitch) * k;
+    if (!freeLook.active) {
+      const ease = 1 - Math.exp(-6 * dt);
+      freeLook.yaw += (0 - freeLook.yaw) * ease;
+      freeLook.pitch += (0 - freeLook.pitch) * ease;
     }
     _forward.copy(FORWARD_LOCAL).applyQuaternion(flight.quaternion);
     _boom.copy(_forward).negate();
-    if (fl.yaw !== 0 || fl.pitch !== 0) {
-      _boom.applyAxisAngle(WORLD_UP, fl.yaw);
+    if (freeLook.yaw !== 0 || freeLook.pitch !== 0) {
+      _boom.applyAxisAngle(WORLD_UP, freeLook.yaw);
       _boomRight.crossVectors(WORLD_UP, _boom).normalize();
-      _boom.applyAxisAngle(_boomRight, fl.pitch);
+      _boom.applyAxisAngle(_boomRight, freeLook.pitch);
     }
     _camTarget
       .copy(flight.position)
@@ -249,15 +234,14 @@ export function FlightRig() {
     // Never let the camera sink into a mountainside.
     const camGround = groundHeightAt(camera.position.x, camera.position.z);
     if (Number.isFinite(camGround)) {
-      camera.position.y = Math.max(
-        camera.position.y,
-        camGround + CAMERA_MIN_GROUND,
+      camera.position.setY(
+        Math.max(camera.position.y, camGround + CAMERA_MIN_GROUND),
       );
     }
 
     _lookTarget
       .copy(flight.position)
-      .addScaledVector(_forward, fl.active ? 0 : CAMERA_LOOK_AHEAD);
+      .addScaledVector(_forward, freeLook.active ? 0 : CAMERA_LOOK_AHEAD);
     camera.up.copy(WORLD_UP);
     camera.lookAt(_lookTarget);
 

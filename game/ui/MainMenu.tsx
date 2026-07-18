@@ -28,7 +28,7 @@ export function MainMenu() {
             FREEDOM FLY
           </h1>
           <p className="mt-2 text-sm text-white/50">
-            Open skies over the mountains. No goals, no clock — just fly.
+            Endless mountains, open sky. No goals, no clock — just fly.
           </p>
         </motion.div>
 

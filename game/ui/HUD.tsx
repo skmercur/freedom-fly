@@ -43,7 +43,6 @@ export function HUD() {
   const thrRef = useRef<HTMLSpanElement>(null);
   const timeRef = useRef<HTMLSpanElement>(null);
   const stallRef = useRef<HTMLDivElement>(null);
-  const boundsRef = useRef<HTMLDivElement>(null);
   const groundRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -68,8 +67,6 @@ export function HUD() {
       }
       if (stallRef.current)
         stallRef.current.style.opacity = flight.stalling ? "1" : "0";
-      if (boundsRef.current)
-        boundsRef.current.style.opacity = flight.outOfBounds ? "1" : "0";
       if (groundRef.current)
         groundRef.current.style.opacity = flight.grounded ? "1" : "0";
       raf = requestAnimationFrame(tick);
@@ -108,15 +105,6 @@ export function HUD() {
         className="absolute left-1/2 top-10 -translate-x-1/2 rounded-lg border border-red-400/40 bg-red-500/20 px-4 py-1.5 text-sm font-bold uppercase tracking-widest text-red-200 backdrop-blur"
       >
         ⚠ Stall — lower the nose
-      </div>
-
-      {/* Center: leaving the play area */}
-      <div
-        ref={boundsRef}
-        style={{ opacity: 0, transition: "opacity 200ms" }}
-        className="absolute left-1/2 top-24 -translate-x-1/2 rounded-lg border border-amber-300/40 bg-amber-400/15 px-4 py-1.5 text-sm font-bold uppercase tracking-widest text-amber-100 backdrop-blur"
-      >
-        ⚠ Leaving the valley — turn back
       </div>
 
       {/* Center-bottom: on-ground hint */}

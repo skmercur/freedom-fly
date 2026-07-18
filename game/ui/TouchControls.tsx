@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { setStickAxis, setThrottleTarget } from "@/game/systems/input";
 import { flight } from "@/game/systems/flight";
 
@@ -8,25 +8,16 @@ const STICK_RADIUS = 56; // px of knob travel
 
 /**
  * On-screen controls for touch devices: a left thumb-stick (roll/pitch, drag
- * up = climb) and a right throttle rail (absolute 0–100%). Rendered only when
- * the device reports a coarse pointer. Knob/fill are moved by direct DOM
- * writes so dragging never re-renders React.
+ * up = climb) and a right throttle rail (absolute 0–100%). Visibility is pure
+ * CSS — shown only for coarse pointers — so no device sniffing in JS. Knob and
+ * fill are moved by direct DOM writes so dragging never re-renders React.
  */
 export function TouchControls() {
-  const [touch, setTouch] = useState(false);
-  useEffect(() => {
-    setTouch(
-      window.matchMedia("(pointer: coarse)").matches ||
-        navigator.maxTouchPoints > 0,
-    );
-  }, []);
-
-  if (!touch) return null;
   return (
-    <>
+    <div className="hidden pointer-coarse:contents">
       <Stick />
       <ThrottleRail />
-    </>
+    </div>
   );
 }
 

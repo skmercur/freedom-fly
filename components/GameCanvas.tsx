@@ -40,8 +40,9 @@ export function GameCanvas() {
         return renderer;
       }}
     >
-      {/* Distance haze so far terrain fades into the horizon colour. */}
-      <fog attach="fog" args={[COLORS.fog, 900, 3800]} />
+      {/* Distance haze so far terrain fades into the horizon colour (and the
+          endless-terrain tile grid never shows its outer edge). */}
+      <fog attach="fog" args={[COLORS.fog, 1100, 5200]} />
       <Scene />
     </Canvas>
   );

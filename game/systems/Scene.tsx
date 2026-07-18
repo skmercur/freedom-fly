@@ -1,6 +1,7 @@
 "use client";
 
 import { Environment } from "@/game/effects/Environment";
+import { Clouds } from "@/game/effects/Clouds";
 import { CrashBurst } from "@/game/effects/CrashBurst";
 import { Terrain } from "@/game/entities/Terrain";
 import { FlightRig } from "@/game/systems/FlightRig";
@@ -17,6 +18,7 @@ export function Scene() {
     <>
       <Environment />
       <Terrain />
+      <Clouds />
       <FlightRig />
       <CrashBurst />
     </>

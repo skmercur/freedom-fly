@@ -45,8 +45,6 @@ export interface FlightState {
   stalling: boolean;
   /** True while rolling on the ground after a landing (or before take-off). */
   grounded: boolean;
-  /** True while outside WORLD_RADIUS — the HUD warns and the sim pushes back. */
-  outOfBounds: boolean;
   /** Seconds airborne since the current flight started, for the HUD. */
   flightTime: number;
   /** Whether the physics step should advance (false in menu / after a crash). */
@@ -63,7 +61,6 @@ export const flight: FlightState = {
   altitude: 0,
   stalling: false,
   grounded: false,
-  outOfBounds: false,
   flightTime: 0,
   running: false,
 };
@@ -97,7 +94,6 @@ export function resetFlight(position: THREE.Vector3, heading = 0): void {
   flight.airspeed = START_SPEED;
   flight.stalling = false;
   flight.grounded = false;
-  flight.outOfBounds = false;
   flight.flightTime = 0;
 }
 
