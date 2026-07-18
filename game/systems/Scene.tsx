@@ -1,30 +1,21 @@
 "use client";
 
 import { Environment } from "@/game/effects/Environment";
-import { Starfield } from "@/game/entities/Starfield";
-import { Player } from "@/game/entities/Player";
-import { World } from "@/game/systems/World";
-import { Particles } from "@/game/effects/Particles";
-import { CameraShake } from "@/game/effects/CameraShake";
-import { PostProcessing } from "@/game/effects/PostProcessing";
+import { Terrain } from "@/game/entities/Terrain";
+import { FlightRig } from "@/game/systems/FlightRig";
 
 /**
  * The full scene graph rendered inside the Canvas.
  *
- * Render order mirrors the per-frame update order: the camera settles first,
- * the Player publishes its position, then the World loop and entities run
- * against that fresh position, and finally particles and post-processing.
+ * Sky + lights, the terrain to fly over, and the FlightRig — which owns the
+ * aircraft, steps the flight physics and drives the chase camera every frame.
  */
 export function Scene() {
   return (
     <>
-      <CameraShake />
       <Environment />
-      <Starfield />
-      <Player />
-      <World />
-      <Particles />
-      <PostProcessing />
+      <Terrain />
+      <FlightRig />
     </>
   );
 }

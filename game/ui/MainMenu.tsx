@@ -4,11 +4,10 @@ import { motion } from "framer-motion";
 import { useGameStore } from "@/stores/gameStore";
 import { Button, GlassPanel } from "./primitives";
 
-/** Title screen: play, open settings, and a quick how-to. */
+/** Title screen: take off, open settings, and a quick controls reference. */
 export function MainMenu() {
   const start = useGameStore((s) => s.start);
   const toSettings = useGameStore((s) => s.toSettings);
-  const highScore = useGameStore((s) => s.highScore);
 
   return (
     <motion.div
@@ -24,54 +23,48 @@ export function MainMenu() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.05, type: "spring", stiffness: 120 }}
         >
-          <div className="mb-1 text-5xl">🕊️</div>
-          <h1 className="bg-gradient-to-r from-teal-300 via-cyan-300 to-sky-400 bg-clip-text text-5xl font-black tracking-tight text-transparent">
+          <div className="mb-1 text-5xl">🛩️</div>
+          <h1 className="bg-gradient-to-r from-sky-300 via-cyan-200 to-blue-400 bg-clip-text text-5xl font-black tracking-tight text-transparent">
             FREEDOM FLY
           </h1>
           <p className="mt-2 text-sm text-white/50">
-            Weave through the void. Grab the light. Never stop.
+            Open skies over the mountains. No goals, no clock — just fly.
           </p>
         </motion.div>
 
-        <div className="my-6 rounded-2xl bg-white/5 py-3 text-white/80">
-          <span className="text-xs uppercase tracking-widest text-white/40">
-            Best
-          </span>
-          <div className="text-3xl font-bold text-amber-300">
-            {highScore.toLocaleString()}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-3">
+        <div className="mt-7 flex flex-col gap-3">
           <Button onClick={start} className="text-lg">
-            ▶ Play
+            🛫 Take off
           </Button>
           <Button variant="ghost" onClick={toSettings}>
             ⚙ Settings
           </Button>
         </div>
 
-        <div className="mt-6 grid grid-cols-3 gap-2 text-xs text-white/45">
-          <div>
-            <div className="text-lg">🟡</div>
-            Collect for combo
-          </div>
-          <div>
-            <div className="text-lg">🔴</div>
-            Dodge the rocks
-          </div>
-          <div>
-            <div className="text-lg">✨</div>
-            Grab power-ups
-          </div>
+        <div className="mt-7 grid grid-cols-2 gap-x-6 gap-y-2 text-left text-xs text-white/55">
+          <ControlRow keys="↑ / ↓" action="Pitch (climb / dive)" />
+          <ControlRow keys="← / →" action="Roll (bank)" />
+          <ControlRow keys="Z / S" action="Throttle up / down" />
+          <ControlRow keys="Q / D" action="Rudder (yaw)" />
         </div>
 
         <p className="mt-5 text-[11px] leading-relaxed text-white/35">
-          Move with <span className="text-white/60">WASD / Arrows</span>, the{" "}
-          <span className="text-white/60">mouse</span>, or the on-screen stick.
-          Press <span className="text-white/60">Esc</span> to pause.
+          Keep your airspeed up — fly too slow and the wing{" "}
+          <span className="text-white/60">stalls</span>. Touch the ground and you
+          respawn in the air.
         </p>
       </GlassPanel>
     </motion.div>
+  );
+}
+
+function ControlRow({ keys, action }: { keys: string; action: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[11px] text-white/80">
+        {keys}
+      </span>
+      <span>{action}</span>
+    </div>
   );
 }

@@ -1,45 +1,49 @@
 "use client";
 
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useGameStore } from "@/stores/gameStore";
-import { useIsTouch } from "@/game/hooks/useIsTouch";
 import { LoadingScreen } from "./LoadingScreen";
 import { MainMenu } from "./MainMenu";
 import { SettingsPanel } from "./SettingsPanel";
 import { HUD } from "./HUD";
-import { PauseMenu } from "./PauseMenu";
-import { GameOverScreen } from "./GameOverScreen";
-import { Joystick } from "./Joystick";
+
+/** Brief "you hit the ground" overlay shown before the auto-respawn. */
+function CrashOverlay() {
+  return (
+    <motion.div
+      key="crashed"
+      className="pointer-events-none absolute inset-0 flex items-center justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <div className="rounded-2xl border border-white/10 bg-black/40 px-8 py-5 text-center backdrop-blur">
+        <div className="text-2xl font-black tracking-tight text-white">
+          Terrain contact
+        </div>
+        <div className="mt-1 text-sm text-white/60">Respawning…</div>
+      </div>
+    </motion.div>
+  );
+}
 
 /**
- * The DOM overlay. It sits above the WebGL canvas and swaps screens based on
- * the current game phase. The whole layer is `pointer-events-none` so the
- * canvas keeps receiving mouse steering; individual panels/controls opt back
- * in to pointer events themselves.
+ * The DOM overlay above the WebGL canvas. It swaps screens based on the current
+ * phase. The layer is `pointer-events-none` so the canvas keeps input; panels
+ * opt back into pointer events themselves.
  */
 export function GameUI() {
   const phase = useGameStore((s) => s.phase);
-  const isTouch = useIsTouch();
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden font-sans text-white">
-      {/* Vignette (bloom lives in WebGPU; this focuses the frame in the DOM). */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          boxShadow: "inset 0 0 180px 40px rgba(0,0,0,0.7)",
-        }}
-      />
-
-      {(phase === "playing" || phase === "paused") && <HUD />}
-      {isTouch && phase === "playing" && <Joystick />}
+      {(phase === "flying" || phase === "crashed") && <HUD />}
 
       <AnimatePresence mode="wait">
         {phase === "loading" && <LoadingScreen key="loading" />}
         {phase === "menu" && <MainMenu key="menu" />}
         {phase === "settings" && <SettingsPanel key="settings" />}
-        {phase === "paused" && <PauseMenu key="paused" />}
-        {phase === "gameover" && <GameOverScreen key="gameover" />}
+        {phase === "crashed" && <CrashOverlay key="crashed" />}
       </AnimatePresence>
     </div>
   );

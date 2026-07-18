@@ -5,7 +5,6 @@ import { useEffect, useRef } from "react";
 import { useGameStore } from "@/stores/gameStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useKeyboard } from "@/game/hooks/useKeyboard";
-import { usePointer } from "@/game/hooks/usePointer";
 import { GameUI } from "@/game/ui/GameUI";
 import { audio } from "@/lib/audio";
 
@@ -31,9 +30,8 @@ export function GameShell() {
   const musicEnabled = useSettingsStore((s) => s.musicEnabled);
   const volume = useSettingsStore((s) => s.volume);
 
-  // Global input: keyboard everywhere, mouse steering over the canvas.
+  // Global input: keyboard flight controls.
   useKeyboard();
-  usePointer(containerRef);
 
   // Boot: show the loading screen briefly, then reveal the menu.
   useEffect(() => {

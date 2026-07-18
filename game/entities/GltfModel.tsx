@@ -1,7 +1,7 @@
 "use client";
 
 import { useLoader } from "@react-three/fiber";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
@@ -12,6 +12,8 @@ interface Props {
   rotation?: [number, number, number];
   castShadow?: boolean;
   receiveShadow?: boolean;
+  /** Fired with the prepared object once it is ready (e.g. to register it). */
+  onReady?: (object: THREE.Object3D) => void;
 }
 
 /**
@@ -26,6 +28,7 @@ export function GltfModel({
   rotation = [0, 0, 0],
   castShadow = false,
   receiveShadow = false,
+  onReady,
 }: Props) {
   const gltf = useLoader(GLTFLoader, url);
 
@@ -50,6 +53,10 @@ export function GltfModel({
     container.add(root);
     return container;
   }, [gltf, targetSize, castShadow, receiveShadow]);
+
+  useEffect(() => {
+    onReady?.(object);
+  }, [object, onReady]);
 
   return <primitive object={object} rotation={rotation} />;
 }

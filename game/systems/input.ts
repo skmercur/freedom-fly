@@ -1,38 +1,39 @@
 import { clamp } from "@/lib/math";
 
 /**
- * Shared, non-reactive input state.
+ * Shared, non-reactive flight input.
  *
- * Every input source (keyboard, mouse, touch joystick) writes here and the
- * Player reads it inside `useFrame`. Because it never lives in React state,
- * moving the ship costs zero re-renders.
+ * Every control source (keyboard, on-screen stick) writes here and the flight
+ * physics reads it inside `useFrame`. Because it never lives in React state,
+ * steering the aircraft costs zero re-renders. Each axis is in [-1, 1].
  */
 export interface InputState {
-  /** Directional axis from keyboard / joystick, each component in [-1, 1]. */
-  axis: { x: number; y: number };
-  /** Absolute pointer target in normalized space [-1, 1]. */
-  pointer: { x: number; y: number };
-  /** True when the pointer is the active control (mouse/touch drag). */
-  pointerActive: boolean;
+  /** Elevator: +1 = nose up (climb), -1 = nose down (dive). */
+  pitch: number;
+  /** Ailerons: +1 = bank right, -1 = bank left. */
+  roll: number;
+  /** Rudder: +1 = nose right, -1 = nose left. */
+  yaw: number;
+  /** Throttle rate: +1 = opening up, -1 = closing. Integrated over time. */
+  throttle: number;
 }
 
 export const input: InputState = {
-  axis: { x: 0, y: 0 },
-  pointer: { x: 0, y: 0 },
-  pointerActive: false,
+  pitch: 0,
+  roll: 0,
+  yaw: 0,
+  throttle: 0,
 };
 
 export function resetInput(): void {
-  input.axis.x = 0;
-  input.axis.y = 0;
-  input.pointer.x = 0;
-  input.pointer.y = 0;
-  input.pointerActive = false;
+  input.pitch = 0;
+  input.roll = 0;
+  input.yaw = 0;
+  input.throttle = 0;
 }
 
-/** Called by the virtual joystick; magnitude is clamped to the unit circle. */
-export function setJoystickAxis(x: number, y: number): void {
-  input.axis.x = clamp(x, -1, 1);
-  input.axis.y = clamp(y, -1, 1);
-  input.pointerActive = false;
+/** Called by the virtual joystick: x = roll, y = pitch, clamped to unit range. */
+export function setStickAxis(x: number, y: number): void {
+  input.roll = clamp(x, -1, 1);
+  input.pitch = clamp(y, -1, 1);
 }
