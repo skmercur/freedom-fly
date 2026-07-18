@@ -161,7 +161,7 @@ export function HUD() {
       <div
         ref={stallRef}
         style={{ opacity: 0, transition: "opacity 120ms" }}
-        className="absolute left-1/2 top-10 -translate-x-1/2 rounded-lg border border-red-400/40 bg-red-500/20 px-4 py-1.5 text-sm font-bold uppercase tracking-widest text-red-200 backdrop-blur"
+        className="absolute left-1/2 top-32 -translate-x-1/2 rounded-lg border border-red-400/40 bg-red-500/20 px-4 py-1.5 text-sm font-bold uppercase tracking-widest text-red-200 backdrop-blur"
       >
         Stall — lower the nose
       </div>
@@ -170,7 +170,7 @@ export function HUD() {
       <div
         ref={stressRef}
         style={{ opacity: 0, transition: "opacity 120ms" }}
-        className="absolute left-1/2 top-24 -translate-x-1/2 rounded-lg border border-amber-300/40 bg-amber-400/15 px-4 py-1.5 text-sm font-bold uppercase tracking-widest text-amber-100 backdrop-blur"
+        className="absolute left-1/2 top-44 -translate-x-1/2 rounded-lg border border-amber-300/40 bg-amber-400/15 px-4 py-1.5 text-sm font-bold uppercase tracking-widest text-amber-100 backdrop-blur"
       >
         Overstress — ease off
       </div>

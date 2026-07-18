@@ -8,6 +8,7 @@ import { MainMenu } from "./MainMenu";
 import { SettingsPanel } from "./SettingsPanel";
 import { HUD } from "./HUD";
 import { TouchControls } from "./TouchControls";
+import { AdBanner } from "./AdBanner";
 import { Button, GlassPanel } from "./primitives";
 
 const CRASH_TEXT = {
@@ -90,6 +91,10 @@ export function GameUI() {
     <div className="pointer-events-none absolute inset-0 overflow-hidden font-sans text-white">
       {inFlight && <HUD />}
       {phase === "flying" && <TouchControls />}
+
+      {/* Rendered once, unconditionally, so the ad loads on the very first
+          screen and its iframe is never torn down / reloaded on phase changes. */}
+      <AdBanner />
 
       <AnimatePresence mode="wait">
         {phase === "loading" && (
