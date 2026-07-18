@@ -1,0 +1,12 @@
+# Freedom Fly is a static export (see `output: "export"` in next.config.ts) —
+# no Next.js server runtime needed, Netlify just serves the `out/` directory.
+
+[build]
+  command = "pnpm build"
+  publish = "out"
+
+# The compressed glb models never change without a redeploy — cache hard.
+[[headers]]
+  for = "/models/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
