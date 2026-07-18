@@ -104,7 +104,7 @@ export function HUD() {
         style={{ opacity: 0, transition: "opacity 120ms" }}
         className="absolute left-1/2 top-10 -translate-x-1/2 rounded-lg border border-red-400/40 bg-red-500/20 px-4 py-1.5 text-sm font-bold uppercase tracking-widest text-red-200 backdrop-blur"
       >
-        ⚠ Stall — lower the nose
+        Stall — lower the nose
       </div>
 
       {/* Center-bottom: on-ground hint */}
@@ -116,9 +116,19 @@ export function HUD() {
         On the ground — full throttle and pull up to take off
       </div>
 
-      {/* Top-right: pause hint */}
-      <div className="absolute right-6 top-6 text-[11px] uppercase tracking-widest text-white/40">
-        Esc — pause
+      {/* Top-right: pilot + pause hint */}
+      <div className="absolute right-6 top-6 text-right">
+        <div className="text-[11px] uppercase tracking-widest text-white/40">
+          Esc — pause
+        </div>
+        <a
+          href="https://github.com/skmercur/"
+          target="_blank"
+          rel="noreferrer"
+          className="pointer-events-auto mt-1 block text-[10px] tracking-widest text-white/30 transition hover:text-white/60"
+        >
+          Created by Sofiane KHOUDOUR
+        </a>
       </div>
     </div>
   );

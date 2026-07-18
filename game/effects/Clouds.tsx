@@ -12,28 +12,57 @@ import {
   CLOUD_MIN_Y,
 } from "@/lib/constants";
 
-/** Soft round puff: white radial gradient on a small canvas. */
-function makePuffTexture(): THREE.CanvasTexture {
-  const size = 128;
+let puffTexture: THREE.CanvasTexture | null = null;
+
+/**
+ * Soft, irregular puff: several overlapping radial blobs painted onto a canvas
+ * give a non-uniform cloudy silhouette instead of a flat disc. Cached once and
+ * shared by every sprite — each cloud gets its own tinted material so the field
+ * reads as depth and light rather than a wall of identical stamps.
+ */
+function getPuffTexture(): THREE.CanvasTexture {
+  if (puffTexture) return puffTexture;
+  const size = 256;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d")!;
-  const g = ctx.createRadialGradient(
-    size / 2,
-    size / 2,
+  // A handful of overlapping blobs of varying radius and offset build a fluffy,
+  // asymmetric outline. Centered loosely on the lower-middle so a sprite reads
+  // as a heap with a lit top and a shadowed base.
+  const blobs = 9;
+  const cx = size * 0.5;
+  const cy = size * 0.58;
+  for (let i = 0; i < blobs; i++) {
+    const a = (Math.PI * 2 * i) / blobs + Math.random() * 0.6;
+    const r = size * (0.28 + Math.random() * 0.16);
+    const px = cx + Math.cos(a) * size * (0.08 + Math.random() * 0.12);
+    const py = cy + Math.sin(a) * size * (0.05 + Math.random() * 0.10);
+    const g = ctx.createRadialGradient(px, py, 0, px, py, r);
+    g.addColorStop(0, "rgba(255,255,255,1)");
+    g.addColorStop(0.45, "rgba(255,255,255,0.5)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, size, size);
+  }
+  // Lift the top edge a touch and recess the bottom for a sense of light from
+  // above. Drawing a soft, brighter dome on the upper half sells "sunlit crown".
+  const crown = ctx.createRadialGradient(
+    cx,
+    cy - size * 0.18,
     0,
-    size / 2,
-    size / 2,
-    size / 2,
+    cx,
+    cy - size * 0.18,
+    size * 0.42,
   );
-  g.addColorStop(0, "rgba(255,255,255,0.9)");
-  g.addColorStop(0.55, "rgba(255,255,255,0.45)");
-  g.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = g;
+  crown.addColorStop(0, "rgba(255,255,255,0.55)");
+  crown.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = crown;
   ctx.fillRect(0, 0, size, size);
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  puffTexture = tex;
   return tex;
 }
 
@@ -53,7 +82,7 @@ function getField(): CloudField {
   if (field) return field;
 
   const material = new THREE.SpriteMaterial({
-    map: makePuffTexture(),
+    map: getPuffTexture(),
     transparent: true,
     opacity: 0.55,
     depthWrite: false,

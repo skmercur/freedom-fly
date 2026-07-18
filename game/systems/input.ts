@@ -28,6 +28,7 @@ export const input: InputAxes = zeroAxes();
 const keyboard = zeroAxes();
 const gamepad = zeroAxes();
 const stick = { pitch: 0, roll: 0 };
+const mouse = { pitch: 0, roll: 0 };
 
 /**
  * Absolute throttle request (0..1) from the touch slider or a preset key.
@@ -37,8 +38,16 @@ const stick = { pitch: 0, roll: 0 };
 let throttleTarget: number | null = null;
 
 function recompute(): void {
-  input.pitch = clamp(keyboard.pitch + gamepad.pitch + stick.pitch, -1, 1);
-  input.roll = clamp(keyboard.roll + gamepad.roll + stick.roll, -1, 1);
+  input.pitch = clamp(
+    keyboard.pitch + gamepad.pitch + stick.pitch + mouse.pitch,
+    -1,
+    1,
+  );
+  input.roll = clamp(
+    keyboard.roll + gamepad.roll + stick.roll + mouse.roll,
+    -1,
+    1,
+  );
   input.yaw = clamp(keyboard.yaw + gamepad.yaw, -1, 1);
   input.throttle = clamp(keyboard.throttle + gamepad.throttle, -1, 1);
 }
@@ -61,6 +70,13 @@ export function setStickAxis(x: number, y: number): void {
   recompute();
 }
 
+/** Called by mouse steering: x = roll, y = pitch, already deadzoned/curved. */
+export function setMouseAxes(x: number, y: number): void {
+  mouse.roll = clamp(x, -1, 1);
+  mouse.pitch = clamp(y, -1, 1);
+  recompute();
+}
+
 /** Request an absolute throttle setting (presets 1–4, touch slider). */
 export function setThrottleTarget(v: number): void {
   throttleTarget = clamp(v, 0, 1);
@@ -78,6 +94,8 @@ export function resetInput(): void {
   Object.assign(gamepad, zeroAxes());
   stick.pitch = 0;
   stick.roll = 0;
+  mouse.pitch = 0;
+  mouse.roll = 0;
   throttleTarget = null;
   recompute();
 }

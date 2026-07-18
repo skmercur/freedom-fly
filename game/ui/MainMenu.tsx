@@ -23,7 +23,13 @@ export function MainMenu() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.05, type: "spring", stiffness: 120 }}
         >
-          <div className="mb-1 text-5xl">🛩️</div>
+          <img
+            src="/web-app-manifest-512x512.png"
+            alt="Freedom Fly logo"
+            width={96}
+            height={96}
+            className="mx-auto mb-1 h-24 w-24 rounded-2xl"
+          />
           <h1 className="bg-gradient-to-r from-sky-300 via-cyan-200 to-blue-400 bg-clip-text text-5xl font-black tracking-tight text-transparent">
             FREEDOM FLY
           </h1>
@@ -34,14 +40,16 @@ export function MainMenu() {
 
         <div className="mt-7 flex flex-col gap-3">
           <Button onClick={start} className="text-lg">
-            🛫 Take off
+            Take off
           </Button>
           <Button variant="ghost" onClick={toSettings}>
-            ⚙ Settings
+            Settings
           </Button>
         </div>
 
         <div className="mt-7 grid grid-cols-2 gap-x-6 gap-y-2 text-left text-xs text-white/55">
+          <ControlRow keys="Mouse" action="Steer (aim to fly)" />
+          <ControlRow keys="RMB" action="Hold to look around" />
           <ControlRow keys="↑ / ↓" action="Pitch (climb / dive)" />
           <ControlRow keys="← / →" action="Roll (bank)" />
           <ControlRow keys="Z / S" action="Throttle up / down" />

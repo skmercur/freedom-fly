@@ -48,12 +48,12 @@ function PauseOverlay() {
       <GlassPanel className="w-full max-w-xs p-8 text-center">
         <h2 className="mb-6 text-3xl font-bold text-white">Paused</h2>
         <div className="flex flex-col gap-3">
-          <Button onClick={resume}>▶ Resume</Button>
+          <Button onClick={resume}>Resume</Button>
           <Button variant="ghost" onClick={restart}>
-            ↻ Restart flight
+            Restart flight
           </Button>
           <Button variant="ghost" onClick={toMenu}>
-            ✕ Quit to menu
+            Quit to menu
           </Button>
         </div>
         <p className="mt-5 text-[11px] text-white/35">Esc also resumes</p>

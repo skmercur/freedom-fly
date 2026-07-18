@@ -45,8 +45,16 @@ function Toggle({
 /** Settings: SFX / music toggles and master volume. */
 export function SettingsPanel() {
   const toMenu = useGameStore((s) => s.toMenu);
-  const { soundEnabled, musicEnabled, volume, toggleSound, toggleMusic, setVolume } =
-    useSettingsStore();
+  const {
+    soundEnabled,
+    musicEnabled,
+    mouseSteering,
+    volume,
+    toggleSound,
+    toggleMusic,
+    toggleMouseSteering,
+    setVolume,
+  } = useSettingsStore();
 
   return (
     <motion.div
@@ -64,21 +72,27 @@ export function SettingsPanel() {
         <div className="flex flex-col gap-3">
           <Toggle
             label="Sound Effects"
-            icon="🔊"
+            icon=""
             on={soundEnabled}
             onToggle={toggleSound}
           />
           <Toggle
             label="Music"
-            icon="🎵"
+            icon=""
             on={musicEnabled}
             onToggle={toggleMusic}
+          />
+          <Toggle
+            label="Mouse Steering"
+            icon=""
+            on={mouseSteering}
+            onToggle={toggleMouseSteering}
           />
 
           <div className="rounded-2xl bg-white/5 px-4 py-3">
             <div className="mb-2 flex items-center justify-between font-medium text-white/85">
               <span className="flex items-center gap-2">
-                <span className="text-lg">🎚️</span> Volume
+                <span className="text-lg"></span> Volume
               </span>
               <span className="text-white/50">{Math.round(volume * 100)}%</span>
             </div>
@@ -96,7 +110,7 @@ export function SettingsPanel() {
 
         <div className="mt-8 flex justify-center">
           <Button variant="ghost" onClick={toMenu}>
-            ← Back
+            Back
           </Button>
         </div>
       </GlassPanel>

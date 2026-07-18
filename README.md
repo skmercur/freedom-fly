@@ -1,36 +1,151 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Freedom Fly
+
+<div align="center">
+  <img src="public/web-app-manifest-512x512.png" alt="Freedom Fly logo" width="128" height="128" />
+</div>
+
+> Endless mountains, open sky. No goals, no clock — just fly.
+
+**Freedom Fly** is a free, open-source flight simulator that runs entirely in the browser. Take off, soar over procedural mountains, stall, land, and take off again — no downloads, no install, no account. Built on Next.js, React Three Fiber, and Three.js, with a real (if lightweight) flight-physics model and an endless-world terrain system.
+
+Play it: [https://freedom-fly.vercel.app](https://freedom-fly.vercel.app)  
+Source: [https://github.com/skmercur/freedom-fly](https://github.com/skmercur/freedom-fly)
+
+---
+
+## Features
+
+- **Real-time flight physics** — lift, drag, thrust, gravity, stalls and ground effect, integrated per frame.
+- **Endless world** — terrain and clouds wrap around the camera, so you never run out of sky.
+- **Land anywhere flat enough** — touch down gently, wings level, on shallow ground and you roll out safely; steep or fast contact is a crash.
+- **Realistic landings & takeoffs** — sink-rate, up-vector and slope checks decide whether contact is a landing or a wreck.
+- **Dynamic sky** — drifting cumulus cloud field, speed-driven FOV, crash camera shake.
+- **Multi-input controls** — keyboard, gamepad, and touch (on-screen stick + throttle rail) all blended into a single shared input bus.
+- **Responsive UI** — animated menus, live flight instruments (airspeed, altitude, throttle, flight time), stall warning and ground-roll hint.
+- **Audio** — procedural engine, wind, touchdown and crash sounds synthesized via the Web Audio API (no asset downloads).
+- **Configurable** — every physics, camera, and cloud constant lives in [`lib/constants.ts`](lib/constants.ts) and is a one-line tweak.
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18.18+ (Next.js 16 requirement)
+- npm, pnpm, yarn, or bun
+
+### Install & run
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command         | Description                          |
+| --------------- | ------------------------------------ |
+| `npm run dev`   | Start the dev server with HMR        |
+| `npm run build` | Production build                     |
+| `npm run start` | Run the production build              |
+| `npm run lint`  | Lint with ESLint + `eslint-config-next` |
 
-## Learn More
+## Controls
 
-To learn more about Next.js, take a look at the following resources:
+| Input            | Action                       |
+| ---------------- | ---------------------------- |
+| **↑ / ↓**        | Pitch (climb / dive)         |
+| **← / →**        | Roll (bank left / right)     |
+| **Z / S**        | Throttle up / down           |
+| **Q / D**        | Rudder (yaw left / right)    |
+| **1 – 4**        | Throttle presets (0/33/66/100%) |
+| **Esc**          | Pause / resume                |
+| **Mouse drag**   | Look around (free-look orbit) |
+| **Gamepad**      | Left stick = pitch/roll, triggers = throttle |
+| **Touch**        | Left thumb-stick = roll/pitch, right rail = throttle |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Keep your airspeed up — fly too slow and the wing **stalls**. Touch down gently, wings level, and you can **land** and take off again.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
+```
+app/                     Next.js App Router (server entry, layout, globals)
+components/              React gluing layer
+  ├─ GameShell.tsx       Owns DOM/canvas layout, boot flow, audio unlock
+  ├─ GameCanvas.tsx      R3F <Canvas> + scene graph
+  └─ ErrorBoundary.tsx
+game/
+  ├─ entities/          Aircraft, Terrain, propeller, GLTF loader
+  ├─ effects/           Clouds, environment lighting, crash burst, shake
+  ├─ hooks/             useKeyboard
+  ├─ systems/           Flight physics, input, gamepad, terrain, scene, engine
+  └─ ui/                HUD, MainMenu, Settings, TouchControls, LoadingScreen
+lib/
+  ├─ constants.ts       ALL tunable values (physics, camera, clouds, palette)
+  ├─ math.ts            Small math helpers
+  └─ audio.ts           Web Audio engine/wind/crash synth
+stores/                 Zustand stores (game state, settings)
+public/
+  ├─ models/            cessna.glb, terrain.glb
+  └─ icons + manifest
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Customizing
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Everything is tuned from a single file: [`lib/constants.ts`](lib/constants.ts).
+
+```ts
+// Make it floaty & arcade-like:
+export const GRAVITY = 6;
+export const LIFT_K = 0.0030;
+export const DRAG_K = 0.0004;
+
+// Triple the clouds:
+export const CLOUD_COUNT = 100;
+
+// Pull the camera in tight:
+export const CAMERA_DISTANCE = 14;
+```
+
+No `#ifdef`, no config files — edit a number, save, and the dev server reloads.
+
+## Tech Stack
+
+- **[Next.js 16](https://nextjs.org)** (App Router)
+- **[React 19](https://react.dev)** + **[React Three Fiber 9](https://docs.pmnd.rs/react-three-fiber)**
+- **[Three.js](https://threejs.org)** + **[@react-three/drei](https://github.com/pmndrs/drei)** + **postprocessing**
+- **[Zustand](https://github.com/pmndrs/zustand)** for non-reactic game state
+- **[Framer Motion](https://www.framer.com/motion/)** for UI transitions
+- **[Tailwind CSS 4](https://tailwindcss.com)** for the HUD/menus
+
+## Architecture Notes
+
+- **Zero re-render state.** Flight physics, input blending, audio and camera live in plain module-level singletons (`game/systems/*`). React mounts the canvas and the DOM overlay; it does **not** hold the per-frame game state. A single `useFrame` drives physics + camera, gauges are pushed via their own private rAF.
+- **SSR-safe.** The WebGL canvas is dynamically imported with `ssr: false`; everything Three-related runs on the client only.
+- **Multi-input fusion.** Keyboard, gamepad and the touch joystick each publish to a shared `input` bus (`game/systems/input.ts`); the physics just reads the combined, clamped result.
+
+## Contributing
+
+Contributions are welcome! This is an open-source project — issues, PRs, and ideas all count.
+
+1. Fork the repo
+2. Create your branch: `git checkout -b feat/my-idea`
+3. Commit your changes (`npm run lint` should stay green)
+4. Open a Pull Request
+
+Please keep new tunables in `lib/constants.ts` and avoid adding heavy new dependencies — the current footprint is intentional so the game loads fast.
+
+## License
+
+This project is open-source. See the [LICENSE](LICENSE) file for details.
+If no LICENSE file is present yet, it is released under the **MIT License** — feel free to use, fork, and remix.
+
+## Author
+
+- **Sofiane KHOUDOUR** — [https://github.com/skmercur/](https://github.com/skmercur/)
+
+## Acknowledgements
+
+- Built with [Next.js](https://nextjs.org), [Three.js](https://threejs.org) and [React Three Fiber](https://docs.pmnd.rs/react-three-fiber).
+- Aircraft & terrain models ship under their respective licenses in `public/models/`.
+- Inspired by every free-flight sim that ever let you "just fly."

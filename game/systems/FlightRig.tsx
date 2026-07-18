@@ -7,9 +7,11 @@ import { Aircraft } from "@/game/entities/Aircraft";
 import { flight, resetFlight, stepFlight } from "@/game/systems/flight";
 import { groundHeightAt } from "@/game/systems/terrain";
 import { pollGamepad } from "@/game/systems/gamepad";
+import { setMouseAxes } from "@/game/systems/input";
 import { addTrauma, stepTrauma } from "@/game/effects/shake";
 import { audio } from "@/lib/audio";
 import { useGameStore } from "@/stores/gameStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import {
   CAMERA_DISTANCE,
   CAMERA_HEIGHT,
@@ -44,6 +46,21 @@ const GROUND_RELEASE = GROUND_CLEARANCE + 1.5;
  * module state, mutated by pointer handlers and eased every frame.
  */
 const freeLook = { active: false, yaw: 0, pitch: 0 };
+
+/**
+ * Mouse steering response: dead zone around the screen center so a resting
+ * cursor flies straight, then a squared ramp to full deflection at
+ * MOUSE_FULL_AT of the way to the screen edge — gentle near center, decisive
+ * at the rim.
+ */
+const MOUSE_DEADZONE = 0.1;
+const MOUSE_FULL_AT = 0.85;
+function mouseCurve(v: number): number {
+  const a = Math.abs(v);
+  if (a < MOUSE_DEADZONE) return 0;
+  const t = Math.min(1, (a - MOUSE_DEADZONE) / (MOUSE_FULL_AT - MOUSE_DEADZONE));
+  return Math.sign(v) * t * t;
+}
 
 const _spawn = new THREE.Vector3();
 const _camTarget = new THREE.Vector3();
@@ -115,7 +132,10 @@ export function FlightRig() {
     return () => clearTimeout(id);
   }, [phase]);
 
-  // Right-mouse drag = free-look orbit around the aircraft; snaps back on release.
+  // Right-mouse drag = free-look orbit around the aircraft (snaps back on
+  // release). Otherwise the cursor's offset from the screen center steers:
+  // aim right to bank right, aim up to climb. Steering pauses while
+  // free-looking so glancing around never veers the plane.
   useEffect(() => {
     const onPointerDown = (e: PointerEvent) => {
       if (e.button === 2) freeLook.active = true;
@@ -124,13 +144,22 @@ export function FlightRig() {
       if (e.button === 2) freeLook.active = false;
     };
     const onPointerMove = (e: PointerEvent) => {
-      if (!freeLook.active) return;
-      freeLook.yaw -= e.movementX * 0.005;
-      freeLook.pitch = THREE.MathUtils.clamp(
-        freeLook.pitch + e.movementY * 0.004,
-        -0.4,
-        1.1,
-      );
+      if (freeLook.active) {
+        freeLook.yaw -= e.movementX * 0.005;
+        freeLook.pitch = THREE.MathUtils.clamp(
+          freeLook.pitch + e.movementY * 0.004,
+          -0.4,
+          1.1,
+        );
+        return;
+      }
+      if (e.pointerType !== "mouse") return;
+      if (!useSettingsStore.getState().mouseSteering) return;
+      if (useGameStore.getState().phase !== "flying") return;
+      const nx = (e.clientX / window.innerWidth) * 2 - 1;
+      const ny = (e.clientY / window.innerHeight) * 2 - 1;
+      // Screen-up = climb, matching the touch stick.
+      setMouseAxes(mouseCurve(nx), mouseCurve(-ny));
     };
     const onContextMenu = (e: Event) => e.preventDefault();
     window.addEventListener("pointerdown", onPointerDown);

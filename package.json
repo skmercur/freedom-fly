@@ -2,6 +2,7 @@
   "name": "freedom-fly",
   "version": "0.1.0",
   "private": true,
+  "author": "Sofiane KHOUDOUR (https://github.com/skmercur/)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

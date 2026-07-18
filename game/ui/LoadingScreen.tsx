@@ -17,13 +17,15 @@ export function LoadingScreen({ progress = 0 }: { progress?: number }) {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
       >
-        <motion.span
-          className="text-5xl"
+        <motion.img
+          src="/web-app-manifest-512x512.png"
+          alt="Freedom Fly logo"
+          width={64}
+          height={64}
+          className="h-16 w-16 rounded-xl"
           animate={{ y: [0, -10, 0], rotate: [0, -8, 0] }}
           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-        >
-          🕊️
-        </motion.span>
+        />
         <h1 className="bg-gradient-to-r from-teal-300 to-cyan-400 bg-clip-text text-4xl font-black tracking-tight text-transparent">
           FREEDOM FLY
         </h1>
