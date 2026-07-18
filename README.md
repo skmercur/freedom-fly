@@ -8,7 +8,7 @@
 
 **Freedom Fly** is a free, open-source flight simulator that runs entirely in the browser. Take off, soar over procedural mountains, stall, land, and take off again — no downloads, no install, no account. Built on Next.js, React Three Fiber, and Three.js, with a real (if lightweight) flight-physics model and an endless-world terrain system.
 
-Play it: [https://freedom-fly.vercel.app](https://freedom-fly.vercel.app)  
+Play it: [https://freedom-fly.online](https://freedom-fly.online)  
 Source: [https://github.com/skmercur/freedom-fly](https://github.com/skmercur/freedom-fly)
 
 ---
