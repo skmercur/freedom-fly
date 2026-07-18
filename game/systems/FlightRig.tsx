@@ -5,6 +5,11 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { Aircraft } from "@/game/entities/Aircraft";
 import { flight, resetFlight, stepFlight } from "@/game/systems/flight";
+import {
+  initPhysics,
+  setBodyLinvel,
+  setBodyTranslation,
+} from "@/game/systems/physics";
 import { groundHeightAt } from "@/game/systems/terrain";
 import { pollGamepad } from "@/game/systems/gamepad";
 import { setMouseAxes } from "@/game/systems/input";
@@ -121,6 +126,17 @@ export function FlightRig() {
   // every take-off/respawn — but NOT on pause/resume, which keeps flightId.
   useEffect(() => {
     spawn();
+    // Kick off the Rapier WASM load (no-op after the first call). The spawn
+    // transform is snapshotted because the flight state keeps being mirrored.
+    void initPhysics(
+      { x: flight.position.x, y: flight.position.y, z: flight.position.z },
+      {
+        x: flight.quaternion.x,
+        y: flight.quaternion.y,
+        z: flight.quaternion.z,
+        w: flight.quaternion.w,
+      },
+    );
   }, [flightId]);
 
   // Auto-respawn a short beat after crashing.
@@ -207,7 +223,8 @@ export function FlightRig() {
               audio().touchdown();
               addTrauma(0.25);
             }
-            // Settle on the surface and roll out with friction.
+            // Settle on the surface and roll out with friction. The Rapier
+            // body owns the dynamics, so corrections go through its setters.
             flight.position.y = ground + GROUND_CLEARANCE;
             if (flight.velocity.y < 0) flight.velocity.y = 0;
             const hSpeed = Math.hypot(flight.velocity.x, flight.velocity.z);
@@ -216,6 +233,8 @@ export function FlightRig() {
               flight.velocity.x -= (flight.velocity.x / hSpeed) * drop;
               flight.velocity.z -= (flight.velocity.z / hSpeed) * drop;
             }
+            setBodyTranslation(flight.position);
+            setBodyLinvel(flight.velocity);
             // Rolling into steep terrain is still a wreck.
             if (spread > LANDING_MAX_SLOPE * 2 && hSpeed > STALL_ROLL_SAFE) {
               wreck();

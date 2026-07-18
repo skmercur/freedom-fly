@@ -11,9 +11,6 @@ import {
   DRAG_K,
   GRAVITY,
   GROUND_EFFECT_SPAN,
-  INERTIA_PITCH,
-  INERTIA_ROLL,
-  INERTIA_YAW,
   LIFT_GROUND_EFFECT,
   PITCH_DAMPING,
   PITCH_RATE,
@@ -36,6 +33,13 @@ import {
   YAW_STABILITY,
 } from "@/lib/constants";
 import { consumeThrottleTarget, input } from "@/game/systems/input";
+import {
+  physicsReady,
+  readBodyState,
+  setBodyAngvel,
+  stepBody,
+  teleportBody,
+} from "@/game/systems/physics";
 
 /**
  * Per-frame flight state.
@@ -44,6 +48,11 @@ import { consumeThrottleTarget, input } from "@/game/systems/input";
  * chase camera all read/write this every frame in `useFrame`, and routing that
  * through a store would trigger thousands of re-renders per second. React-facing
  * values (phase, crashed) live in the Zustand gameStore instead.
+ *
+ * This object is a MIRROR of the Rapier rigid body (see `systems/physics.ts`):
+ * `stepFlight` computes aerodynamic forces/torques from it, hands them to
+ * Rapier, then copies the integrated result back. Writes meant to stick
+ * (ground contact, spawn) must also go through the physics setters.
  */
 export interface FlightState {
   /** World position of the aircraft. */
@@ -100,7 +109,7 @@ export const flight: FlightState = {
 const _forward = new THREE.Vector3();
 const _up = new THREE.Vector3();
 const _right = new THREE.Vector3();
-const _acc = new THREE.Vector3();
+const _force = new THREE.Vector3();
 const _airVel = new THREE.Vector3();
 const _vHat = new THREE.Vector3();
 const _vLocal = new THREE.Vector3();
@@ -108,11 +117,6 @@ const _liftDir = new THREE.Vector3();
 const _torque = new THREE.Vector3();
 const _wind = new THREE.Vector3(WIND_X, 0, WIND_Z);
 const _qInv = new THREE.Quaternion();
-const _dq = new THREE.Quaternion();
-const _euler = new THREE.Euler();
-const AXIS_X = new THREE.Vector3(1, 0, 0);
-const AXIS_Y = new THREE.Vector3(0, 1, 0);
-const AXIS_Z = new THREE.Vector3(0, 0, 1);
 const FORWARD_LOCAL = new THREE.Vector3(0, 0, -1);
 const UP_LOCAL = new THREE.Vector3(0, 1, 0);
 
@@ -123,7 +127,7 @@ const UP_LOCAL = new THREE.Vector3(0, 1, 0);
  */
 export function resetFlight(position: THREE.Vector3, heading = 0): void {
   flight.position.copy(position);
-  flight.quaternion.setFromEuler(_euler.set(0, heading, 0));
+  flight.quaternion.setFromEuler(new THREE.Euler(0, heading, 0));
   // Launch already moving forward so the wing has lift from the first frame.
   _forward.copy(FORWARD_LOCAL).applyQuaternion(flight.quaternion);
   flight.velocity.copy(_forward).multiplyScalar(START_SPEED);
@@ -137,14 +141,20 @@ export function resetFlight(position: THREE.Vector3, heading = 0): void {
   flight.stalling = false;
   flight.grounded = false;
   flight.flightTime = 0;
+  // Move the Rapier body too, if it exists yet (it may still be loading the
+  // WASM module on first mount — initPhysics captures the spawn transform).
+  teleportBody(flight.position, flight.quaternion, flight.velocity);
 }
 
 /**
  * Advance the flight model by `dt` seconds.
  *
- * A 6-DoF point-mass aerodynamic model, honest about the physics that make a
- * light aircraft feel like a light aircraft:
+ * The aerodynamic model (below) computes forces and torques; Rapier owns the
+ * 6-DoF dynamics: gravity, force/torque accumulation, semi-implicit
+ * integration and the inertia tensor — including gyroscopic coupling between
+ * the body axes, which the previous hand-rolled integrator didn't model.
  *
+ * Aero model summary:
  *   - Angle of attack (α) and sideslip (β) come from the *wind-relative*
  *     velocity, so the world has a real air mass the aircraft moves through.
  *   - Lift coefficient rises linearly with α until the critical angle, then
@@ -154,17 +164,17 @@ export function resetFlight(position: THREE.Vector3, heading = 0): void {
  *   - Propeller thrust decays with airspeed and with altitude (thin air).
  *   - Control surfaces are torques whose authority scales with dynamic
  *     pressure q: slow flight = mushy controls, fast = twitchy.
- *   - Body rates are integrated through per-axis inertia with damping, giving
- *     the airframe momentum instead of instant rate response.
  *   - Adverse yaw, weathervane stability, engine torque and P-factor add the
  *     small asymmetric moments of a real single-engine prop.
  *   - Ground effect: within ~1 wingspan of the terrain, induced drag drops
  *     and lift rises — the float just before touchdown.
  */
 export function stepFlight(dt: number): void {
+  if (!physicsReady()) return; // Rapier WASM still loading
+
   _forward.copy(FORWARD_LOCAL).applyQuaternion(flight.quaternion);
   _up.copy(UP_LOCAL).applyQuaternion(flight.quaternion);
-  _right.copy(AXIS_X).applyQuaternion(flight.quaternion);
+  _right.set(1, 0, 0).applyQuaternion(flight.quaternion);
 
   // --- Wind-relative air velocity (true airspeed vector) ---
   _airVel.copy(flight.velocity).sub(_wind);
@@ -212,7 +222,7 @@ export function stepFlight(dt: number): void {
   // when slow (prop slipstream keeps the tail alive at high power).
   const authority = clamp(q / CONTROL_REF_Q, 0.1, 1.5);
 
-  // --- Angular dynamics: torques → inertia → body rates ---
+  // --- Torques (body frame) ---
   const rates = flight.angularVelocity;
   _torque.set(0, 0, 0);
 
@@ -241,37 +251,11 @@ export function stepFlight(dt: number): void {
   _torque.z += torqueEffect;
   _torque.y += torqueEffect * 0.6;
 
-  // Integrate body rates through inertia.
-  rates.x += (_torque.x / INERTIA_PITCH) * dt;
-  rates.y += (_torque.y / INERTIA_YAW) * dt;
-  rates.z += (_torque.z / INERTIA_ROLL) * dt;
-  // Hard clamps keep the sim bounded if the player slams the controls.
-  rates.x = clamp(rates.x, -2.5, 2.5);
-  rates.y = clamp(rates.y, -1.2, 1.2);
-  rates.z = clamp(rates.z, -3.0, 3.0);
+  // Rapier takes torques in world space.
+  _torque.applyQuaternion(flight.quaternion);
 
-  // On the ground the gear resists rotation until the wing is ready to fly;
-  // the rudder steers the nose wheel instead of yawing the airframe.
-  if (flight.grounded) {
-    const rollAuthority = clamp(airSpeed / ROTATE_SPEED, 0.1, 1);
-    rates.x *= rollAuthority;
-    rates.z *= rollAuthority;
-    if (Math.abs(input.yaw) > 0.01) {
-      applyBodyRotation(AXIS_Y, -input.yaw * 0.8 * rollAuthority * dt);
-    }
-  }
-
-  applyBodyRotation(AXIS_X, rates.x * dt);
-  applyBodyRotation(AXIS_Y, rates.y * dt);
-  applyBodyRotation(AXIS_Z, rates.z * dt);
-
-  // Refresh body axes now that this frame's rotations have been applied.
-  _forward.copy(FORWARD_LOCAL).applyQuaternion(flight.quaternion);
-  _up.copy(UP_LOCAL).applyQuaternion(flight.quaternion);
-  _right.copy(AXIS_X).applyQuaternion(flight.quaternion);
-
-  // --- Forces ---
-  _acc.set(0, -GRAVITY, 0);
+  // --- Forces (world space; gravity is applied by the Rapier world) ---
+  _force.set(0, 0, 0);
 
   // Thrust: a propeller's pull decays with airspeed and with √ρ (thin air).
   const thrust =
@@ -279,7 +263,7 @@ export function stepFlight(dt: number): void {
     THRUST_MAX *
     Math.max(0.25, 1 - (airSpeed / THRUST_SPEED_DROP) * 0.7) *
     Math.sqrt(rho);
-  _acc.addScaledVector(_forward, thrust);
+  _force.addScaledVector(_forward, thrust);
 
   // Lift coefficient: linear in α up to the critical angle, then a post-stall
   // fall-off to a turbulent plateau — a stalled wing still makes some lift.
@@ -310,37 +294,63 @@ export function stepFlight(dt: number): void {
     _liftDir.copy(_up).addScaledVector(_vHat, -_up.dot(_vHat));
     if (_liftDir.lengthSq() > 1e-6) {
       _liftDir.normalize();
-      _acc.addScaledVector(_liftDir, liftMag);
+      _force.addScaledVector(_liftDir, liftMag);
     }
   }
 
   // Drag opposes the flight path: parasitic + induced (∝ CL², eased by
   // ground effect). A stalled wing is a very draggy wing.
-  const cd =
-    DRAG_K + DRAG_INDUCED_K * cl * cl * (1 - groundEffect * 0.45);
+  const cd = DRAG_K + DRAG_INDUCED_K * cl * cl * (1 - groundEffect * 0.45);
   if (airSpeed > 0.01) {
-    _acc.addScaledVector(_vHat, -q * cd);
+    _force.addScaledVector(_vHat, -q * cd);
   }
 
   // Sideslip drag: flying sideways through the air costs energy.
   if (airSpeed > 0.01 && Math.abs(flight.beta) > 0.01) {
-    _acc.addScaledVector(_right, -Math.sin(flight.beta) * q * 0.02);
+    _force.addScaledVector(_right, -Math.sin(flight.beta) * q * 0.02);
   }
 
-  // --- Integrate linear motion ---
-  flight.velocity.addScaledVector(_acc, dt);
-  flight.position.addScaledVector(flight.velocity, dt);
+  // --- Hand the dynamics to Rapier and mirror the result back ---
+  stepBody(dt, _force, _torque);
+  readBodyState(flight);
+  // Rapier reports angular velocity in world space; the aero model works in
+  // body rates, so convert with the fresh orientation.
+  _qInv.copy(flight.quaternion).invert();
+  rates.applyQuaternion(_qInv);
+
+  // --- Post-step rate limiting & ground handling ---
+  // These modify the body rates, so they're written back to Rapier below.
+  let ratesDirty = false;
+  const clampedX = clamp(rates.x, -2.5, 2.5);
+  const clampedY = clamp(rates.y, -1.2, 1.2);
+  const clampedZ = clamp(rates.z, -3.0, 3.0);
+  if (clampedX !== rates.x || clampedY !== rates.y || clampedZ !== rates.z) {
+    rates.set(clampedX, clampedY, clampedZ);
+    ratesDirty = true;
+  }
+
+  // On the ground the gear resists pitching/rolling until the wing is ready
+  // to fly; the rudder steers the nose wheel instead of yawing the airframe.
+  if (flight.grounded) {
+    const rollAuthority = clamp(airSpeed / ROTATE_SPEED, 0.1, 1);
+    rates.x *= rollAuthority;
+    rates.z *= rollAuthority;
+    if (Math.abs(input.yaw) > 0.01) {
+      rates.y += -input.yaw * 0.8 * rollAuthority;
+    }
+    ratesDirty = true;
+  }
+
+  if (ratesDirty) {
+    // Body rates → world space for Rapier.
+    rates.applyQuaternion(flight.quaternion);
+    setBodyAngvel(rates);
+    rates.applyQuaternion(_qInv); // keep flight state in body rates
+  }
 
   // --- Telemetry ---
   flight.gForce = clamp(liftMag / GRAVITY, -2, 5);
   flight.stalling = absAlpha > STALL_ALPHA;
-}
-
-/** Multiply a local-axis rotation into the airframe orientation. */
-function applyBodyRotation(axis: THREE.Vector3, angle: number): void {
-  if (angle === 0) return;
-  _dq.setFromAxisAngle(axis, angle);
-  flight.quaternion.multiply(_dq).normalize();
 }
 
 /** Point ahead of the nose, for camera aim helpers. Writes into `out`. */
